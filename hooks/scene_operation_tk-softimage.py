@@ -18,29 +18,29 @@ Application = Dispatch("XSI.Application").Application
 
 class SceneOperation(Hook):
     """
-    Hook called to perform an operation with the 
+    Hook called to perform an operation with the
     current scene
     """
-    
+
     def execute(self, operation, file_path, **kwargs):
         """
         Main hook entry point
-        
+
         :operation: String
                     Scene operation to perform
-        
+
         :file_path: String
                     File path to use if the operation
                     requires it (e.g. open)
-                    
+
         :returns:   Depends on operation:
                     'current_path' - Return the current scene
                                      file path as a String
-                    'reset'        - True if scene was reset to an empty 
+                    'reset'        - True if scene was reset to an empty
                                      state, otherwise False
                     all others     - None
         """
-        
+
         if operation == "current_path":
             # return the current scene path
             scene_name = Application.ActiveProject.ActiveScene.Name
@@ -65,6 +65,23 @@ class SceneOperation(Hook):
 
         elif operation == "reset":
             # reset the scene to an empty state
+
+            # NEED TO IMPLEMENT
+            # scene_name = nuke.root().name()
+            # engine = tank.platform.current_engine()
+            # if scene_name == "Root":
+            #     tank_save = engine.commands.get("Tank Save As...")
+            #     try:
+            #         tank_save.get("callback")()
+            #     except:
+            #         Application.SaveSceneAs(file_path, 0)
+            # else:
+            #     snapshot = engine.commands.get("Snapshot...")
+            #     try:
+            #         snapshot.get("callback")()
+            #     except:
+                    # xsi save scene.
+
             try:
                 # use the standard Softimage mechanism to check
                 # for and save the file if required:
