@@ -25,13 +25,13 @@ configuration:
         optional_fields: [name]
         description: A reference to a template which locates a publish file on disk.
         allows_empty: True
-           
+
     template_publish_area:
         type: template
         description: A reference to a template which locates the publish directory on
                      disk
         allows_empty: True
-           
+
     sg_entity_types:
         type: list
         description: "List of Shotgun Entity Types to include in the listings when
@@ -39,41 +39,46 @@ configuration:
         default_value: [Shot, Asset]
         values:
             type: shotgun_entity_type
-           
+
+    allow_task_creation:
+        type: bool
+        description: "Controls whether new tasks can be created from the app."
+        default_value: True
+
     hook_scene_operation:
         type: hook
         parameters: [operation, file_path]
         default_value: "scene_operation_{engine_name}"
-        description: All the application specific scene operations (open, save etc) that 
+        description: All the application specific scene operations (open, save etc) that
                      the app needs to carry out are collected together in this hook.
-        
+
     hook_copy_file:
         type: hook
         parameters: [source_path, target_path]
         default_value: copy_file
-        description: Specify a hook that will be used to copy the file 'source_path' 
+        description: Specify a hook that will be used to copy the file 'source_path'
                      to 'target_path'.
-           
-            
+
+
 # the Shotgun fields that this app needs in order to operate correctly
 requires_shotgun_fields:
 
-# More verbose description of this item 
+# More verbose description of this item
 display_name: "Manage your Work Files"
-description: "Using this app you can change the current work area and 
-              browse work files and publishes.  The app additionally 
-              provides 'Save As' and 'Change Version' commands for 
+description: "Using this app you can change the current work area and
+              browse work files and publishes.  The app additionally
+              provides 'Save As' and 'Change Version' commands for
               managing work files"
-              
+
 # Required minimum versions for this item to run
 requires_shotgun_version:
 requires_core_version: "v0.13.22"
-requires_engine_version: 
+requires_engine_version:
 
 # the engines that this app can operate in:
-supported_engines: 
+supported_engines:
 
 # the frameworks required to run this app
 frameworks:
     - {"name": "tk-framework-widget", "version": "v0.1.13"}
-    
+
