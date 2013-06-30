@@ -113,8 +113,7 @@ class SaveAs(object):
                 (res, form) = self._app.engine.show_modal(title, self._app, SaveAsForm, preview_updater, is_publish, name, can_snapshot)
 
                 if res == SaveAsForm.SHOW_SNAPSHOT_RETURN_CODE:
-                    snapshot_app.show_snapshot_dlg()
-                    break
+                    return snapshot_app.show_snapshot_dlg()
                 elif res == QtGui.QDialog.Accepted:
                     # get details from UI:
                     name = form.name
