@@ -122,6 +122,9 @@ class Ui_SaveAsForm(object):
         self.horizontalLayout_3 = QtGui.QHBoxLayout()
         self.horizontalLayout_3.setContentsMargins(12, 8, 12, 12)
         self.horizontalLayout_3.setObjectName("horizontalLayout_3")
+        self.change_work_area_btn = QtGui.QPushButton(SaveAsForm)
+        self.change_work_area_btn.setObjectName("change_work_area_btn")
+        self.horizontalLayout_3.addWidget(self.change_work_area_btn)
         spacerItem1 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout_3.addItem(spacerItem1)
         self.cancel_btn = QtGui.QPushButton(SaveAsForm)
@@ -156,6 +159,7 @@ class Ui_SaveAsForm(object):
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">line 3</p></body></html>", None, QtGui.QApplication.UnicodeUTF8))
         self.label_4.setText(QtGui.QApplication.translate("SaveAsForm", "<html><head/><body><p><span style=\" font-weight:600;\">Preview:</span></p></body></html>", None, QtGui.QApplication.UnicodeUTF8))
         self.label_6.setText(QtGui.QApplication.translate("SaveAsForm", "<html><head/><body><p><span style=\" font-weight:600;\">Work Area:</span></p></body></html>", None, QtGui.QApplication.UnicodeUTF8))
+        self.change_work_area_btn.setText(QtGui.QApplication.translate("SaveAsForm", "Change Work Area...", None, QtGui.QApplication.UnicodeUTF8))
         self.cancel_btn.setText(QtGui.QApplication.translate("SaveAsForm", "Cancel", None, QtGui.QApplication.UnicodeUTF8))
         self.continue_btn.setText(QtGui.QApplication.translate("SaveAsForm", "Save", None, QtGui.QApplication.UnicodeUTF8))
 
