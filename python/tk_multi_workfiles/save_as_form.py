@@ -41,7 +41,11 @@ class SaveAsForm(QtGui.QWidget):
         self._ui.name_edit.textEdited.connect(self._on_name_edited)
         self._ui.name_edit.returnPressed.connect(self._on_name_return_pressed)
         self._ui.reset_version_cb.stateChanged.connect(self._on_reset_version_changed)
-        self._ui.change_work_area_btn.clicked.connect(self._change_work_area)
+
+        if is_publish:
+            self._ui.change_work_area_btn.setVisible(False)
+        else:
+            self._ui.change_work_area_btn.clicked.connect(self._change_work_area)
 
         self._ui.name_edit.setText(name)
         if not self._launched_from_publish:
