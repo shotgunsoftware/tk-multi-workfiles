@@ -283,7 +283,7 @@ class WorkFiles(object):
         """
         while self._execute_scene_operation_hook("scene_modified"):
             # changes have been made to the scene
-            res = QtGui.QMessageBox.question(None,
+            res = QtGui.QMessageBox.question(QtGui.QApplication.focusWidget(),
                                              "Save your scene?",
                                              "Your scene has unsaved changes. Save before proceeding?",
                                              QtGui.QMessageBox.Yes|QtGui.QMessageBox.No|QtGui.QMessageBox.Cancel)
