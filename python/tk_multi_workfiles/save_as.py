@@ -166,7 +166,7 @@ class SaveAs(object):
 
         # always try to create folders:
         ctx_entity = self.context.task if self.context.task else self.context.entity
-        self._app.tank.create_filesystem_structure(ctx_entity.get("type"), ctx_entity.get("id"))
+        self._app.tank.create_filesystem_structure(ctx_entity.get("type"), ctx_entity.get("id"), engine=self._app.engine.name)
 
         # and save the current file as the new path:
         self._save_current_file_as(new_path)
