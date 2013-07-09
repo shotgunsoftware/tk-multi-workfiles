@@ -339,7 +339,7 @@ class WorkFiles(object):
         """
         self._app.execute_hook("hook_scene_operation", operation="save", file_path=None, context = self._context)
 
-    def _restart_engine(self, ctx):
+    def restart_engine(self, ctx):
         """
         Set context to the new context.  This will
         clear the current scene and restart the
@@ -534,7 +534,7 @@ class WorkFiles(object):
 
             if new_ctx != self._app.context:
                 # restart the engine with the new context
-                self._restart_engine(new_ctx)
+                self.restart_engine(new_ctx)
         except TankError, e:
             QtGui.QMessageBox.critical(self._workfiles_ui, "Failed to change work area",
                                        "Failed to change the work area to '%s':\n\n%s\n\nUnable to continue!" % (new_ctx, e))
@@ -584,7 +584,7 @@ class WorkFiles(object):
 
             if self._context != self._app.context:
                 # restart the engine with the new context
-                self._restart_engine(self._context)
+                self.restart_engine(self._context)
         except TankError, e:
             QtGui.QMessageBox.information(self._workfiles_ui, "Something went wrong!",
                                        "Something went wrong:\n\n%s!" % e)

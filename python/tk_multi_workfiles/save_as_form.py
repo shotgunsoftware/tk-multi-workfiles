@@ -61,7 +61,6 @@ class SaveAsForm(QtGui.QWidget):
         clr = QtGui.QApplication.palette().text().color()
         self._ui.break_line.setStyleSheet("#break_line{color: rgb(%d,%d,%d);}" % (clr.red() * 0.75, clr.green() * 0.75, clr.blue() * 0.75))
 
-
         # finally, start preview info update in background
         self._update_preview_info()
 
@@ -94,7 +93,6 @@ class SaveAsForm(QtGui.QWidget):
         self._ui.name_edit.setEnabled(val)
         self._ui.continue_btn.setEnabled(val)
         self._ui.cancel_btn.setEnabled(val)
-        self._ui.change_work_area_btn.setEnabled(val)
         self._ui.reset_version_cb.setEnabled(val)
         self._ui.filename_preview_label.setEnabled(val)
         self._ui.path_preview_edit.setEnabled(val)
@@ -161,9 +159,12 @@ class SaveAsForm(QtGui.QWidget):
         msg = result.get("message")
         can_reset_version = result.get("can_reset_version")
 
+        # we flip this result to be True if False and False if True.
+        enable_controls = not result.get("disable_controls", False)
+
         # update name and work area previews:
-        path_preview = ""
-        name_preview = ""
+        path_preview = "<p style='color:rgb(226, 146, 0)'>Unable to generate Path </p>"
+        name_preview = "<p style='color:rgb(226, 146, 0)'>Unable to generate Path </p>"
         if path:
             path_preview, name_preview = os.path.split(path)
         self._ui.filename_preview_label.setText(name_preview)
@@ -192,7 +193,7 @@ class SaveAsForm(QtGui.QWidget):
 
         # make sure the controls are enabled in case they
         # were disabled (which change_work_area does).
-        self._enable_controls(True)
+        self._enable_controls(enable_controls)
 
 
 

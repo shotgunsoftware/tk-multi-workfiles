@@ -68,6 +68,13 @@ class SaveAs(object):
         """
         return self._workfiles.change_work_area()
 
+    def restart_engine(self, new_ctx):
+        """
+        Uses workfiles to restart the engine with the passed
+        context, new_ctx.
+        """
+        self._workfiles.restart_engine(new_ctx)
+
     def _show_save_as_dlg(self):
         """
         Show the save as dialog
@@ -84,47 +91,55 @@ class SaveAs(object):
             return
 
         # determine if this is a publish path or not:
-        is_publish = self.publish_template.validate(current_path)
+        is_publish = False
         fields = {}
         title = "Tank Save As"
         name = ""
 
-        if is_publish:
+        # We might be in a context without a publish_template.  We need to check
+        # to make sure publish_template is not None.
+        if self.publish_template and self.publish_template.validate(current_path):
+            is_publish = True
             fields = self.publish_template.get_fields(current_path)
             title = "Copy to Work Area"
             name = fields.get("name")
         else:
             default_name = "scene"
+            name = default_name
             fields = {}
-            if self.work_template.validate(current_path):
-                fields = self.work_template.get_fields(current_path)
-                title = "Tank Save As"
-                name = fields.get("name") or default_name
-            else:
-                name = default_name
-                fields = self.context.as_template_fields(self.work_template)
 
-            try:
-                # make sure the work file name doesn't already exist:
-                # note, this could potentially be slow so for now lets
-                # limit it:
-                counter_limit = 10
-                for counter in range(0, counter_limit):
-                    test_name = name
-                    if counter > 0:
-                        test_name = "%s%d" % (name, counter)
+            # We might be in a context that doesn't have a template so we need
+            # to check work_template is not None.
+            if self.work_template:
+                if self.work_template.validate(current_path):
+                    fields = self.work_template.get_fields(current_path)
+                    title = "Tank Save As"
+                    name = fields.get("name") or default_name
+                else:
+                    name = default_name
+                    fields = self.context.as_template_fields(self.work_template)
 
-                    test_fields = fields.copy()
-                    test_fields["name"] = test_name
+                try:
+                    # make sure the work file name doesn't already exist:
+                    # note, this could potentially be slow so for now lets
+                    # limit it:
+                    counter_limit = 10
+                    for counter in range(0, counter_limit):
+                        test_name = name
+                        if counter > 0:
+                            test_name = "%s%d" % (name, counter)
 
-                    existing_files = self._app.tank.paths_from_template(self.work_template, test_fields, ["version"])
-                    if not existing_files:
-                        name = test_name
-                        break
+                        test_fields = fields.copy()
+                        test_fields["name"] = test_name
 
-            except TankError, e:
-                # this shouldn't be fatal so just log a debug message:
-                self._app.log_debug("Warning - failed to find a default name for Tank Save-As: %s" % e)
+                        existing_files = self._app.tank.paths_from_template(self.work_template, test_fields, ["version"])
+                        if not existing_files:
+                            name = test_name
+                            break
+
+                except TankError, e:
+                    # this shouldn't be fatal so just log a debug message:
+                    self._app.log_debug("Warning - failed to find a default name for Tank Save-As: %s" % e)
 
         worker_cb = lambda details, wp=current_path, ip=is_publish: self.generate_new_work_file_path(wp, ip, details.get("name"), details.get("reset_version"))
         with AsyncWorker(worker_cb) as preview_updater:
@@ -150,6 +165,12 @@ class SaveAs(object):
                     # ok, so do save-as:
                     try:
                         self.save_as(new_path)
+
+                        # If the context has changed during the save as event,
+                        # we need to restart the engine.
+                        if self.context != self._app.context:
+                            # restart the engine with the new context
+                            self.restart_engine(self.context)
                     except Exception, e:
                         self._app.log_exception("Something went wrong while saving!")
 
@@ -186,6 +207,10 @@ class SaveAs(object):
         msg = None
         can_reset_version = False
 
+        if not self.work_template:
+            msg = "You must select a work area!"
+            return {"message":msg, "disable_controls":True}
+
         # validate name:
         if not new_name:
             msg = "You must enter a name!"
@@ -199,6 +224,7 @@ class SaveAs(object):
         fields = {}
 
         # start with fields from context:
+
         fields = self.context.as_template_fields(self.work_template)
 
         # add in any additional fields from current path:
@@ -218,7 +244,11 @@ class SaveAs(object):
 
         # find the current max work file and publish versions:
         from .versioning import Versioning
-        versioning = Versioning(self._app)
+
+        # We explicitly pass the templates to Versioning because we may
+        # be in a different context than what the current engine/app is in.
+        versioning = Versioning(self._app,  work_template=self.work_template,
+                                publish_template=self.publish_template, context=self.context)
         max_work_version = versioning.get_max_workfile_version(fields)
         max_publish_version = versioning.get_max_publish_version(new_name)
         max_version = max(max_work_version, max_publish_version)
