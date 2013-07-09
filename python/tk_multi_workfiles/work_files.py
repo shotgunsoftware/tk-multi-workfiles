@@ -681,10 +681,7 @@ class WorkFiles(object):
                                        "engine. This can be because the task doesn't "
                                        "have a step. Details: %s" % e)
             return
-
-
-        # close dialog
-        self.close()
+        return True
 
     def _get_user_details(self, login_name):
         """
