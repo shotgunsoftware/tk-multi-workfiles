@@ -69,7 +69,7 @@ class SaveAs(object):
             title = "Copy to Work Area"
             name = fields.get("name")
         else:
-            default_name = "scene"
+            default_name = self._app.get_setting("default_name")
             fields = {}
             if self._work_template.validate(current_path):
                 fields = self._work_template.get_fields(current_path)
@@ -78,28 +78,28 @@ class SaveAs(object):
             else:
                 name = default_name
                 fields = self._app.context.as_template_fields(self._work_template)
-            
-            try:
-                # make sure the work file name doesn't already exist:
-                # note, this could potentially be slow so for now lets
-                # limit it:
-                counter_limit = 10
-                for counter in range(0, counter_limit):
-                    test_name = name
-                    if counter > 0:
-                        test_name = "%s%d" % (name, counter)
+            if not self._app.get_setting("force_version_up"):
+                try:
+                    # make sure the work file name doesn't already exist:
+                    # note, this could potentially be slow so for now lets
+                    # limit it:
+                    counter_limit = 10
+                    for counter in range(0, counter_limit):
+                        test_name = name
+                        if counter > 0:
+                            test_name = "%s%d" % (name, counter)
+                        
+                        test_fields = fields.copy()
+                        test_fields["name"] = test_name
                     
-                    test_fields = fields.copy()
-                    test_fields["name"] = test_name
-                
-                    existing_files = self._app.tank.paths_from_template(self._work_template, test_fields, ["version"])
-                    if not existing_files:
-                        name = test_name
-                        break
-                    
-            except TankError, e:
-                # this shouldn't be fatal so just log a debug message:
-                self._app.log_debug("Warning - failed to find a default name for Shotgun Save-As: %s" % e)
+                        existing_files = self._app.tank.paths_from_template(self._work_template, test_fields, ["version"])
+                        if not existing_files:
+                            name = test_name
+                            break
+                        
+                except TankError, e:
+                    # this shouldn't be fatal so just log a debug message:
+                    self._app.log_debug("Warning - failed to find a default name for Shotgun Save-As: %s" % e)
                 
         
         worker_cb = lambda details, wp=current_path, ip=is_publish: self.generate_new_work_file_path(wp, ip, details.get("name"), details.get("reset_version"))
@@ -144,12 +144,7 @@ class SaveAs(object):
         ctx_entity = self._app.context.task or self._app.context.entity or self._app.context.project
         if ctx_entity:
             self._app.tank.create_filesystem_structure(ctx_entity.get("type"), ctx_entity.get("id"))
-            folders = self._app.tank.preview_filesystem_structure(ctx_entity.get("type"), ctx_entity.get("id"))
-            #this always takes long it is strange why it wont work in our config but this way the folders will get created
-        if folder not in folders:
-            self._app.ensure_folder_exists(folder)
-        
-        # and save the current file as the new path:
+
         save_file(self._app, SAVE_FILE_AS_ACTION, self._app.context, new_path)
         
     def generate_new_work_file_path(self, current_path, current_is_publish, new_name, reset_version):

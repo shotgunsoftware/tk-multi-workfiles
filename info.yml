@@ -69,6 +69,17 @@ configuration:
             {type: str}
         allows_empty: True   
 #add filter extension  
+
+    default_name:
+      type: str
+      description: "The default name that gets used for the Save As... Dialog"
+      default: 'scene'
+      allows_empty: True
+
+    force_version_up:
+      type: bool
+      description: "Disables the behaviour to version up the name tag instead of the version itself"
+      default: False
             
 # the Shotgun fields that this app needs in order to operate correctly
 requires_shotgun_fields:
