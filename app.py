@@ -166,4 +166,10 @@ class DebugWrapperShotgun(object):
         data = self._sg.insert(*args, **kwargs)
         self._log_fn("SG API insert end")
         return data
+        
+    def create(self, *args, **kwargs):
+        self._log_fn("SG API create start: %s %s" % (args, kwargs))
+        data = self._sg.create(*args, **kwargs)
+        self._log_fn("SG API create end")
+        return data
     
