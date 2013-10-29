@@ -14,7 +14,7 @@
 configuration:
     template_work:
         type: template
-        fields: context, version, *
+        fields: context, [version], *
         description: A reference to a template which locates a work file on disk.
         allows_empty: True
 

@@ -106,7 +106,7 @@ class WorkFiles(object):
         Will return a WorkFile instance for every file found in both
         work and publish areas
         """
-        if not self._work_template or not self._publish_template:
+        if not self._work_template:# or not self._publish_template:
             return []
         
         current_user = tank.util.get_current_user(self._app.tank)
@@ -170,14 +170,15 @@ class WorkFiles(object):
 
             publish_path = None
             publish_details = None
-            try:
-                publish_path = self._publish_template.apply_fields(fields)
-            except:
-                # failed to convert from work path to publish path!
-                pass
-            else:
-                handled_publish_files.add(publish_path)
-                publish_details = publish_file_details.get(publish_path)
+            if self._publish_template:
+                try:
+                    publish_path = self._publish_template.apply_fields(fields)
+                except:
+                    # failed to convert from work path to publish path!
+                    pass
+                else:
+                    handled_publish_files.add(publish_path)
+                    publish_details = publish_file_details.get(publish_path)
                 
             # create file entry:
             details = {}
@@ -510,7 +511,7 @@ class WorkFiles(object):
         Function called when user clicks Open for a file
         in the Publish Area
         """
-        if not publish_file:
+        if not publish_file or not self._publish_template:
             return
         
         fields = self._publish_template.get_fields(publish_file.publish_path)
@@ -563,7 +564,7 @@ class WorkFiles(object):
         # recent or not:
         from .open_file_form import OpenFileForm        
         open_mode = OpenFileForm.OPEN_WORKFILE
-        if publish_file and not work_file.is_more_recent_than_publish(publish_file):
+        if publish_file and self._publish_template and not work_file.is_more_recent_than_publish(publish_file):
             
             fields = self._publish_template.get_fields(publish_file.publish_path)
             next_version = self._get_next_available_version(fields)
@@ -671,7 +672,7 @@ class WorkFiles(object):
         work template and the publish fields before copying it and opening it 
         as a new work file
         """
-        if not file or not file.is_published:
+        if not file or not file.is_published or not self._publish_template:
             return False
         
         # trying to open a publish:
@@ -1077,6 +1078,9 @@ class WorkFiles(object):
         Get the details of all published files that
         match the current publish template.
         """
+        
+        if not self._publish_template:
+            return {}
         
         # get list of published files for entity:
         filters = [["entity", "is", self._context.entity or self._context.project]]
