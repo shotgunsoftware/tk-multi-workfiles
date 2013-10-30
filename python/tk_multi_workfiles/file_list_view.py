@@ -278,7 +278,7 @@ class FileListView(browser_widget.BrowserWidget):
                     item.addAction(action)
 
                 # build context menu for all publish versions:                
-                published_versions = [f.version for f in files.values() if f.is_published]
+                published_versions = [f.version for f in files.values() if f.is_published and isinstance(f.version, int)]
                 if published_versions:
                     
                     published_versions.sort(reverse=True)
@@ -297,7 +297,7 @@ class FileListView(browser_widget.BrowserWidget):
                         publishes_sm.addAction(action)
                      
                 # build context menu for all work files:
-                wf_versions = [f.version for f in files.values() if f.is_local]
+                wf_versions = [f.version for f in files.values() if f.is_local and isinstance(f.version, int)]
                 if wf_versions:
                     
                     wf_versions.sort(reverse=True)
@@ -357,7 +357,10 @@ class FileListView(browser_widget.BrowserWidget):
             else:
                 tooltip += "This file has never been published"
 
-            details = "<b>%s, v%03d</b>" % (file.name, file.version)
+            if file.version is not None:
+                details = "<b>%s, v%03d</b>" % (file.name, file.version)
+            else:
+                details = "<b>%s</b>" % (file.name)
             if title_colour:    
                 details = "<span style='color:%s'>%s</span>" % (title_colour, details)
             details += "<br>" + file.format_modified_by_details()

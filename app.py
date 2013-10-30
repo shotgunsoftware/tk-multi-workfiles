@@ -33,7 +33,7 @@ class MultiWorkFiles(tank.platform.Application):
         # other commands are only valid if we have at least a valid work template.  Version
         # up the current scene is only available of the work template also has a version key
         template_work = self.get_template("template_work")
-        self._can_save_as = template_work is not Null 
+        self._can_save_as = template_work is not None 
         self._can_change_version = self._can_save_as and ("version" in template_work.keys)
         if self._can_save_as:
             self.engine.register_command("Shotgun Save As...", self.show_save_as_dlg)
