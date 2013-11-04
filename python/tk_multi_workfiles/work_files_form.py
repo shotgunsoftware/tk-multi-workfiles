@@ -219,67 +219,106 @@ class WorkFilesForm(QtGui.QWidget):
             
         @property
         def filter(self):
-            return self._filter
+            return self._filter          
           
     def _update_filter_menu(self):
         """
         Update the list of users to display work files for
         """
-        users = self._handler.get_usersandbox_users()
-                
-        current_user = tank.util.get_current_user(self._app.tank)
+        # get list of filters from handler:
+        filters = self._handler.get_file_filters()
         
         # get selected filter:
         previous_filter = self._get_current_filter()
         
-        def filter_compare(f1, f2):
-            """
-            Compare two filters to determine if they are the same or not
-            """
-            user_1 = f1.get("user")
-            user_2 = f2.get("user")
-            if user_1 == None or user_2 == None:
-                if user_1 != user_2:
-                    return False
-            else:
-                if user_1.get("id") != user_2.get("id"):
-                    return False
-                
-            return (f1.get("mode") == f2.get("mode"))
-        
         # clear menu:
         self._ui.filter_combo.clear()
         
-        # add user work files item:
-        self._ui.filter_combo.addItem("Show Files in my Work Area", 
-                                      self.__FilterObj({"mode":FileListView.WORKFILES_MODE, "user":current_user}))
+        # add back in filters:
         selected_idx = 0
-        
-        # add publishes item:
-        publishes_filter = {"mode":FileListView.PUBLISHES_MODE}
-        self._ui.filter_combo.addItem("Show Files in the Publish Area", self.__FilterObj(publishes_filter))
-        if filter_compare(previous_filter, publishes_filter):
-            selected_idx = 1
-        
-        # add rest of users
-        if users:
-            # add some separators!
-            self._ui.filter_combo.insertSeparator(2)
-        
-            for user in users:
-                if current_user is not None and user["id"] == current_user["id"]:
-                    # already added
-                    continue
+        separator_count = 0
+        for filter in filters:
             
-                filter = {"mode":FileListView.WORKFILES_MODE, "user":user}
+            if filter == "separator":
+                # special 'filter' signifying a separator should be added
+                # - don't add it yet though in case there aren't any more
+                # non separator items following!
+                separator_count += 1
+                continue
             
-                if filter_compare(previous_filter, filter):
-                    selected_idx = self._ui.filter_combo.count()
+            if "menu_label" not in filter:
+                # filter doesn't have a menu label - bad!
+                continue
+
+            # add any separators:
+            while separator_count > 0:
+                separator_count -= 1
+                self._ui.filter_combo.insertSeparator(self._ui.filter_combo.count())
                 
-                self._ui.filter_combo.addItem("Show Files in %s's Work Area" % user["name"], self.__FilterObj(filter))
-                
+            # see if this is the previously selected filter:
+            if filter == previous_filter:
+                selected_idx = self._ui.filter_combo.count()
+
+            # add filter:            
+            self._ui.filter_combo.addItem(filter["menu_label"], self.__FilterObj(filter))
+
         # set the current index:
         self._ui.filter_combo.setCurrentIndex(selected_idx)
+        
+        #users = self._handler.get_usersandbox_users()
+        #current_user = tank.util.get_current_user(self._app.tank)
+        #
+        ## get selected filter:
+        #previous_filter = self._get_current_filter()
+        #
+        #def filter_compare(f1, f2):
+        #    """
+        #    Compare two filters to determine if they are the same or not
+        #    """
+        #    user_1 = f1.get("user")
+        #    user_2 = f2.get("user")
+        #    if user_1 == None or user_2 == None:
+        #        if user_1 != user_2:
+        #            return False
+        #    else:
+        #        if user_1.get("id") != user_2.get("id"):
+        #            return False
+        #        
+        #    return (f1.get("mode") == f2.get("mode"))
+        #
+        ## clear menu:
+        #self._ui.filter_combo.clear()
+        #
+        ## add user work files item:
+        #self._ui.filter_combo.addItem("Show Files in my Work Area", 
+        #                              self.__FilterObj({"mode":FileListView.WORKFILES_MODE, "user":current_user}))
+        #selected_idx = 0
+        #
+        ## add publishes item:
+        #publishes_filter = {"mode":FileListView.PUBLISHES_MODE}
+        #self._ui.filter_combo.addItem("Show Files in the Publish Area", self.__FilterObj(publishes_filter))
+        #if filter_compare(previous_filter, publishes_filter):
+        #    selected_idx = 1
+        #
+        ## add rest of users
+        #if users:
+        #    # add some separators!
+        #    self._ui.filter_combo.insertSeparator(2)
+        #
+        #    for user in users:
+        #        if current_user is not None and user["id"] == current_user["id"]:
+        #            # already added
+        #            continue
+        #    
+        #        filter = {"mode":FileListView.WORKFILES_MODE, "user":user}
+        #    
+        #        if filter_compare(previous_filter, filter):
+        #            selected_idx = self._ui.filter_combo.count()
+        #        
+        #        self._ui.filter_combo.addItem("Show Files in %s's Work Area" % user["name"], self.__FilterObj(filter))
+        #        
+        ## set the current index:
+        #self._ui.filter_combo.setCurrentIndex(selected_idx)
         
     def _get_current_filter(self):
         """

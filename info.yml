@@ -88,6 +88,20 @@ configuration:
         description: Specify a hook that will be used to copy the file 'source_path' 
                      to 'target_path'.
            
+    hook_additional_filters:
+        type: hook
+        parameters: []
+        default_value: additional_filters
+        description: Specify a hook that will return a list of additional filters that
+                     can be used to filter the file list.
+                     
+    hook_find_additional_files:
+        type: hook
+        parameters: []
+        default_value: find_additional_files
+        description: Specify a hook that will return a list of additional files to be 
+                     displayed in the file list.
+           
     file_extensions:
         type: list
         description: List of file extensions to be shown in the work files view. If
