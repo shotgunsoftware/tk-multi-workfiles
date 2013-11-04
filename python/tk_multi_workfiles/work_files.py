@@ -24,6 +24,8 @@ from .select_work_area_form import SelectWorkAreaForm
             
 from .scene_operation import reset_current_scene, prepare_new_scene, open_file, OPEN_FILE_ACTION, NEW_FILE_ACTION
 
+from .file_list_view import FileListView
+
 class WorkFiles(object):
     
     @staticmethod
@@ -1114,6 +1116,56 @@ class WorkFiles(object):
             publish_files[path] = details
             
         return publish_files
+    
+    def get_file_filters(self):
+        """
+        Return a list of filters to be presented in the UI.  The selected
+        filter is passed to the find files method along with the selected
+        work area/context.
+        """
+        filters = []
+
+        current_user = tank.util.get_current_user(self._app.tank)
+        
+        # always add workfiles filter:
+        filters.append({"key":"work_files",
+                        "menu_label":"Show Files in my Work Area", 
+                        "list_title":"Available Work Files",
+                        "show_in_file_system":True,
+                        "user":current_user,
+                        "mode":FileListView.WORKFILES_MODE})
+        
+        # add publishes filter:
+        if self._publish_template:
+            filters.append({"key":"publishes",
+                            "menu_label":"Show Files in the Publish Area", 
+                            "list_title":"Available Publishes",
+                            "show_in_file_system":True,
+                            "mode":FileListView.PUBLISHES_MODE})
+          
+        # add user sandbox filters:
+        users = self.get_usersandbox_users()
+        if users:
+            filters.append("separator")
+            
+        for user in users:
+            if current_user is not None and user["id"] == current_user["id"]:
+                continue
+            
+            filters.append({"key":"work_files",
+                        "menu_label":"Show Files in %s's Work Area" % user["name"],
+                        "list_title":"Available Work Files",
+                        "show_in_file_system":True,
+                        "user":user,
+                        "mode":FileListView.WORKFILES_MODE})
+            
+        # and finally, allow hook to define additional filters:
+        additional_filters = self._app.execute_hook("hook_additional_filters")
+        if additional_filters:
+            filters.append("separator")
+            filters.extend(additional_filters)
+        
+        return filters
     
     def get_usersandbox_users(self):
         """
