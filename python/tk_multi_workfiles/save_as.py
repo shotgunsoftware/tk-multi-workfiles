@@ -60,11 +60,14 @@ class SaveAs(object):
             return
         
         # determine if this is a publish path or not:
-        is_publish = self._publish_template.validate(current_path)
+        is_publish = self._publish_template and self._publish_template.validate(current_path)
         
         # see if name is used in the work template:
         name_is_used = "name" in self._work_template.keys
         name_is_optional = name_is_used and self._work_template.is_optional("name")
+
+        # see if version is used in the work template:
+        version_is_used = "version" in self._work_template.keys
         
         # update some initial info:        
         title = "Save to Work Area" if is_publish else "Shotgun Save As"
@@ -79,7 +82,7 @@ class SaveAs(object):
                 if not default_name and not name_is_optional:
                     # name isn't optional so we should use something:
                     default_name = "scene"
-                prefer_version_up = self._app.get_setting("saveas_prefer_version_up")
+                prefer_version_up = version_is_used and self._app.get_setting("saveas_prefer_version_up")
                 
                 fields = {}
                 if self._work_template.validate(current_path):
@@ -133,7 +136,7 @@ class SaveAs(object):
             while True:
                 # show modal dialog:
                 from .save_as_form import SaveAsForm
-                (res, form) = self._app.engine.show_modal(title, self._app, SaveAsForm, preview_updater, is_publish, name_is_used, name)
+                (res, form) = self._app.engine.show_modal(title, self._app, SaveAsForm, preview_updater, is_publish, name_is_used, name, version_is_used)
                 
                 if res == QtGui.QDialog.Accepted:
                     # get details from UI:
@@ -184,7 +187,8 @@ class SaveAs(object):
         msg = None
         can_reset_version = False
 
-        has_name_field = "name" in self._work_template.keys 
+        has_name_field = "name" in self._work_template.keys
+        has_version_field = "version" in self._work_template.keys
 
         # validate name:
         if has_name_field:
@@ -208,10 +212,11 @@ class SaveAs(object):
             template_fields = base_template.get_fields(current_path)
             fields = dict(chain(template_fields.iteritems(), fields.iteritems()))
         else:
-            # just make sure there is a version
-            fields["version"] = 1
-            
-        current_version = fields.get("version")
+            if has_version_field:
+                # just make sure there is a version
+                fields["version"] = 1
+
+        # keep track of the current name:
         current_name = fields.get("name")
 
         # update name field:
@@ -222,55 +227,68 @@ class SaveAs(object):
             if "name" in fields:
                 del fields["name"]
                 
-        # find the current max work file and publish versions:
-        from .versioning import Versioning
-        versioning = Versioning(self._app)
-        max_work_version = versioning.get_max_workfile_version(fields)
-        max_publish_version = versioning.get_max_publish_version(fields)
-        max_version = max(max_work_version, max_publish_version)
-        
-        # now depending on what the source was 
-        # and if the name has been changed:
-        new_version = None
-        if current_is_publish and ((not has_name_field) or new_name == current_name):
-            # we're ok to just copy publish across and version up
-            can_reset_version = False
-            new_version = max_version + 1 if max_version else 1
+        if has_version_field:
+            # get the current version:
+            current_version = fields.get("version")
             
-            if new_version != current_version+1:
-                #(AD) - do we need a warning here?
-                pass
+            # find the current max work file and publish versions:
+            from .versioning import Versioning
+            versioning = Versioning(self._app)
+            max_work_version = versioning.get_max_workfile_version(fields)
+            max_publish_version = versioning.get_max_publish_version(fields)
+            max_version = max(max_work_version, max_publish_version)
             
-            msg = None
-        else:
-            if max_version:
-                # already have a publish and/or work file
+            # now depending on what the source was 
+            # and if the name has been changed:
+            new_version = None
+            if current_is_publish and ((not has_name_field) or new_name == current_name):
+                # we're ok to just copy publish across and version up
                 can_reset_version = False
-                new_version = max_version + 1
+                new_version = max_version + 1 if max_version else 1
                 
-                if max_version == max_work_version:
-                    if has_name_field:
-                        msg = "A work file with this name already exists.  If you proceed, your file will use the next available version number."
-                    else:
-                        msg = "A previous version of this work file already exists.  If you proceed, your file will use the next available version number."
-
-                else:
-                    if has_name_field:
-                        msg = "A publish file with this name already exists.  If you proceed, your file will use the next available version number."
-                    else:
-                        msg = "A previous version of this published file already exists.  If you proceed, your file will use the next available version number."
-                    
+                if new_version != current_version+1:
+                    #(AD) - do we need a warning here?
+                    pass
+                
+                msg = None
             else:
-                # don't have an existing version
-                can_reset_version = True
-                msg = ""
-                if reset_version:
-                    new_version = 1
+                if max_version:
+                    # already have a publish and/or work file
+                    can_reset_version = False
+                    new_version = max_version + 1
                     
-        # now create new path
-        if new_version:
-            fields["version"] = new_version
+                    if max_version == max_work_version:
+                        if has_name_field:
+                            msg = "A work file with this name already exists.  If you proceed, your file will use the next available version number."
+                        else:
+                            msg = "A previous version of this work file already exists.  If you proceed, your file will use the next available version number."
+    
+                    else:
+                        if has_name_field:
+                            msg = "A publish file with this name already exists.  If you proceed, your file will use the next available version number."
+                        else:
+                            msg = "A previous version of this published file already exists.  If you proceed, your file will use the next available version number."
+                        
+                else:
+                    # don't have an existing version
+                    can_reset_version = True
+                    msg = ""
+                    if reset_version:
+                        new_version = 1
+                        
+            if new_version:
+                fields["version"] = new_version
+                
+        # create the new path                
         new_work_path = self._work_template.apply_fields(fields)
+        
+        if not has_version_field:
+            # no version, so just warn if there is already a file:
+            if os.path.exists(new_work_path):
+                msg = "A file with this name already exists.  If you proceed, the existing file will be overwritten."
+                
+            # (AD) - what about if the file is in another location, e.g. a Perforce depot or another site?
+            # - should this be exposed through a hook as well??
         
         return {"path":new_work_path, "message":msg, "can_reset_version":can_reset_version}
 
