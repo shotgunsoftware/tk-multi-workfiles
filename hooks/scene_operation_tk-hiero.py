@@ -59,6 +59,9 @@ class SceneOperation(Hook):
         elif operation == "open":
             # open the specified script
             hiero.core.openProject(file_path.replace(os.path.sep, "/"))
+            # set the projectroot for the project
+            self.parent.log_debug("setting projectroot to %s" % self.parent.tank.project_path)
+            hiero.core.projects()[-1].setProjectRoot(self.parent.tank.project_path)
         
         elif operation == "save":
             # save the current script:
@@ -76,6 +79,8 @@ class SceneOperation(Hook):
         elif operation == "prepare_new":
             # add a new project to hiero
             hiero.core.newProject()
+            self.parent.log_debug("setting projectroot to %s" % self.parent.tank.project_path)
+            hiero.core.projects()[-1].setProjectRoot(self.parent.tank.project_path)
         
 
     def _get_current_project(self):
