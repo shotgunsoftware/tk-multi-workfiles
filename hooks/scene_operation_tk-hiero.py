@@ -76,9 +76,6 @@ class SceneOperation(Hook):
         elif operation == "prepare_new":
             # add a new project to hiero
             hiero.core.newProject()
-            self.parent.log_debug("setting projectroot to %s" % self.parent.tank.project_path)
-            hiero.core.projects()[-1].setProjectRoot(self.parent.tank.project_path)
-        
 
     def _get_current_project(self):
         """
