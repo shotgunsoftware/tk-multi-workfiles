@@ -76,7 +76,6 @@ class SceneOperation(Hook):
         elif operation == "prepare_new":
             # add a new project to hiero
             hiero.core.newProject()
-        
 
     def _get_current_project(self):
         """
