@@ -18,7 +18,7 @@ browser_widget = tank.platform.import_framework("tk-framework-widget", "browser_
 
 from .work_file import WorkFile
 
-from . import constants
+from .file_filter import FileFilter
 
 class FileListView(browser_widget.BrowserWidget):
     
@@ -66,8 +66,7 @@ class FileListView(browser_widget.BrowserWidget):
         
         handler = data["handler"]
         filter = data.get("filter")
-        
-        mode = filter.get("mode", constants.WORKFILES_MODE)
+        mode = filter.mode
         
         # get some additional info from the handler:
         ctx = handler.get_current_work_area()
@@ -118,12 +117,12 @@ class FileListView(browser_widget.BrowserWidget):
                     
                     # find highest version info:
                     local_versions = [f.version for f in files_versions.values() if f.is_local]
-                    if mode == constants.WORKFILES_MODE and not local_versions:
+                    if mode == FileFilter.WORKFILES_MODE and not local_versions:
                         # don't have a version of this file to display!
                         continue
                     
                     publish_versions = [f.version for f in files_versions.values() if f.is_published]
-                    if mode == constants.PUBLISHES_MODE and not publish_versions:
+                    if mode == FileFilter.PUBLISHES_MODE and not publish_versions:
                         # don't have a version of this file to display!
                         continue
                     
@@ -144,13 +143,13 @@ class FileListView(browser_widget.BrowserWidget):
                         # skip any versions that are greater than the one we are looking for
                         # Note: we shouldn't choose a thumbnail for versions that aren't
                         # going to be displayed so filter these out
-                        if ((mode == constants.WORKFILES_MODE and version > highest_local_version)
-                            or (mode == constants.PUBLISHES_MODE and version > highest_publish_version)):
+                        if ((mode == FileFilter.WORKFILES_MODE and version > highest_local_version)
+                            or (mode == FileFilter.PUBLISHES_MODE and version > highest_publish_version)):
                             continue
                         thumbnail = files_versions[version].thumbnail
                         if thumbnail:
                             # special case - update the thumbnail!
-                            if mode == constants.WORKFILES_MODE and version < highest_local_version:
+                            if mode == FileFilter.WORKFILES_MODE and version < highest_local_version:
                                 files_versions[highest_local_version].set_thumbnail(thumbnail)
                             break
                     details["thumbnail"] = thumbnail
@@ -161,7 +160,7 @@ class FileListView(browser_widget.BrowserWidget):
                     # determine when this file was last updated (modified or published)
                     # this is used to sort the files in the list:
                     last_updated = None
-                    if mode == constants.WORKFILES_MODE and highest_local_version >= 0:
+                    if mode == FileFilter.WORKFILES_MODE and highest_local_version >= 0:
                         last_updated = files_versions[highest_local_version].modified_at
                     if highest_publish_version >= 0:
                         published_at = files_versions[highest_publish_version].published_at
@@ -318,7 +317,7 @@ class FileListView(browser_widget.BrowserWidget):
         """
         if not self._current_filter:
             return
-        self.set_label(self._current_filter.get("list_title", "Available Files"))
+        self.set_label(self._current_filter.list_title)
                                
     def _add_file_item(self, latest_published_file, latest_work_file):
         """
@@ -330,10 +329,10 @@ class FileListView(browser_widget.BrowserWidget):
         red = "rgb(200, 84, 74)"
         green = "rgb(145, 206, 95)"
         
-        current_mode = self._current_filter.get("mode")
+        current_mode = self._current_filter.mode
         
         file = None
-        if current_mode == constants.WORKFILES_MODE:
+        if current_mode == FileFilter.WORKFILES_MODE:
             file = latest_work_file
             
             title_colour = None
@@ -363,7 +362,7 @@ class FileListView(browser_widget.BrowserWidget):
                 details = "<span style='color:%s'>%s</span>" % (title_colour, details)
             details += "<br>" + file.format_modified_by_details()
 
-        else: # current_mode == constants.PUBLISHES_MODE
+        else: # current_mode == FileFilter.PUBLISHES_MODE
             file = latest_published_file
             
             title_colour = None
