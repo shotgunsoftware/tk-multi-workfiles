@@ -26,6 +26,8 @@ from .scene_operation import reset_current_scene, prepare_new_scene, open_file, 
 
 from .file_list_view import FileListView
 
+from . import constants
+
 class WorkFiles(object):
     
     @staticmethod
@@ -78,7 +80,7 @@ class WorkFiles(object):
         """
         Show the main tank file manager dialog 
         """
-        #print self.find_files(None)
+        #print self.find_files({})
         #return
         
         try:
@@ -98,7 +100,7 @@ class WorkFiles(object):
         self._workfiles_ui.show_in_fs.connect(self._on_show_in_file_system)
         self._workfiles_ui.show_in_shotgun.connect(self._on_show_in_shotgun)
         
-    def find_files(self, user):
+    def find_files(self, filter):
         """
         Find files using the current context, work and publish templates
         
@@ -108,7 +110,9 @@ class WorkFiles(object):
         Will return a WorkFile instance for every file found in both
         work and publish areas
         """
-        if not self._work_template:# or not self._publish_template:
+        user = filter.get("user")
+        
+        if not self._work_template:
             return []
         
         current_user = tank.util.get_current_user(self._app.tank)
@@ -1128,23 +1132,21 @@ class WorkFiles(object):
         current_user = tank.util.get_current_user(self._app.tank)
         
         # always add workfiles filter:
-        filters.append({"key":"work_files",
-                        "menu_label":"Show Files in my Work Area", 
+        filters.append({"menu_label":"Show Files in my Work Area", 
                         "list_title":"Available Work Files",
                         "show_in_file_system":True,
                         "user":current_user,
-                        "mode":FileListView.WORKFILES_MODE})
+                        "mode":constants.WORKFILES_MODE})
         
         # add publishes filter:
         if self._publish_template:
-            filters.append({"key":"publishes",
-                            "menu_label":"Show Files in the Publish Area", 
+            filters.append({"menu_label":"Show Files in the Publish Area", 
                             "list_title":"Available Publishes",
                             "show_in_file_system":True,
-                            "mode":FileListView.PUBLISHES_MODE})
+                            "mode":constants.PUBLISHES_MODE})
           
         # add user sandbox filters:
-        users = self.get_usersandbox_users()
+        users = self._get_usersandbox_users()
         if users:
             filters.append("separator")
             
@@ -1152,22 +1154,28 @@ class WorkFiles(object):
             if current_user is not None and user["id"] == current_user["id"]:
                 continue
             
-            filters.append({"key":"work_files",
-                        "menu_label":"Show Files in %s's Work Area" % user["name"],
-                        "list_title":"Available Work Files",
-                        "show_in_file_system":True,
-                        "user":user,
-                        "mode":FileListView.WORKFILES_MODE})
+            filters.append({"menu_label":"Show Files in %s's Work Area" % user["name"],
+                            "list_title":"%s's Work Files" % user["name"],
+                            "show_in_file_system":True,
+                            "user":user,
+                            "mode":constants.WORKFILES_MODE})
             
         # and finally, allow hook to define additional filters:
         additional_filters = self._app.execute_hook("hook_additional_filters")
         if additional_filters:
+            # validate additional filters:
+            for filter in additional_filters:
+                if filter.get("mode") == "publishes":
+                    filter["mode"] = constants.PUBLISHES_MODE
+                else:
+                    filter["mode"] = constants.WORKFILES_MODE
+            
             filters.append("separator")
             filters.extend(additional_filters)
         
         return filters
     
-    def get_usersandbox_users(self):
+    def _get_usersandbox_users(self):
         """
         Find all available user sandbox users for the 
         current work area.

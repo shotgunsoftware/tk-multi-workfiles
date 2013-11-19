@@ -31,9 +31,9 @@ class AdditionalFilters(Hook):
     
         additional_filters = []
     
-        additional_filters.append({"key":"perforce",
-                    "menu_label":"Show Files in the Perforce Depot", 
-                    "list_title":"Available Depot Files",
-                    "show_in_file_system":False})
+        additional_filters.append({"menu_label":"Show Files in the Perforce Depot", 
+                                "list_title":"Available Depot Files",
+                                "show_in_file_system":False,
+                                "mode":"publishes"})
         
         return additional_filters

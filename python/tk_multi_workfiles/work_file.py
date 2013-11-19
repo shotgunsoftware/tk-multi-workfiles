@@ -11,6 +11,23 @@
 import os
 from datetime import datetime, timedelta
 
+class FileObject(object):
+    def __init__(self):
+        
+        self._details = {}
+        
+    def add_details(self, type, details):
+        """
+        """
+        self._details[type] = details
+    
+    def get_details(self, type):
+        """
+        """
+        return self._details.get(type)
+        
+
+
 class WorkFile(object):
     """
     Encapsulate details about a work file

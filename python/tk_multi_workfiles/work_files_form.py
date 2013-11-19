@@ -19,6 +19,9 @@ from tank.platform.qt import QtCore, QtGui
 from .work_file import WorkFile
 from .file_list_view import FileListView
 
+from . import constants
+
+
 class WorkFilesForm(QtGui.QWidget):
     """
     Primary work area UI
@@ -112,7 +115,7 @@ class WorkFilesForm(QtGui.QWidget):
         
         """
         current_filter = self._get_current_filter()
-        show_local = (current_filter.get("mode") == FileListView.WORKFILES_MODE) 
+        show_local = (current_filter.get("mode") == constants.WORKFILES_MODE) 
         self.show_in_fs.emit(show_local, current_filter.get("user"))
         
     def closeEvent(self, e):
@@ -128,11 +131,13 @@ class WorkFilesForm(QtGui.QWidget):
         
         work_file = self._ui.file_list.selected_work_file
         published_file = self._ui.file_list.selected_published_file
-        mode = self._ui.file_list.mode
+                
+        current_filter = self._get_current_filter()
+        mode = current_filter.get("mode")
         
-        if mode == FileListView.WORKFILES_MODE:
+        if mode == constants.WORKFILES_MODE:
             self.open_workfile.emit(work_file, published_file, False)            
-        else: # mode == FileListView.PUBLISHES_MODE:
+        else: # mode == constants.PUBLISHES_MODE:
             self.open_publish.emit(published_file, work_file, False)
 
     def _on_open_previous_workfile(self, file):
@@ -186,11 +191,12 @@ class WorkFilesForm(QtGui.QWidget):
         # get the file filter:
         filter = self._get_current_filter()
         
+        # hide/show the show-in-filesystem link:
+        self._ui.show_in_fs_label.setVisible(filter.get("show_in_file_system", True))
+        
         # clear and reload list:
         self._ui.file_list.clear()
-        self._ui.file_list.load({"handler":self._handler, 
-                                "user":filter.get("user"), 
-                                "mode":filter.get("mode", FileListView.WORKFILES_MODE)})
+        self._ui.file_list.load({"handler":self._handler, "filter":filter})
         
         self._on_file_selection_changed()
         
@@ -265,66 +271,10 @@ class WorkFilesForm(QtGui.QWidget):
         # set the current index:
         self._ui.filter_combo.setCurrentIndex(selected_idx)
         
-        #users = self._handler.get_usersandbox_users()
-        #current_user = tank.util.get_current_user(self._app.tank)
-        #
-        ## get selected filter:
-        #previous_filter = self._get_current_filter()
-        #
-        #def filter_compare(f1, f2):
-        #    """
-        #    Compare two filters to determine if they are the same or not
-        #    """
-        #    user_1 = f1.get("user")
-        #    user_2 = f2.get("user")
-        #    if user_1 == None or user_2 == None:
-        #        if user_1 != user_2:
-        #            return False
-        #    else:
-        #        if user_1.get("id") != user_2.get("id"):
-        #            return False
-        #        
-        #    return (f1.get("mode") == f2.get("mode"))
-        #
-        ## clear menu:
-        #self._ui.filter_combo.clear()
-        #
-        ## add user work files item:
-        #self._ui.filter_combo.addItem("Show Files in my Work Area", 
-        #                              self.__FilterObj({"mode":FileListView.WORKFILES_MODE, "user":current_user}))
-        #selected_idx = 0
-        #
-        ## add publishes item:
-        #publishes_filter = {"mode":FileListView.PUBLISHES_MODE}
-        #self._ui.filter_combo.addItem("Show Files in the Publish Area", self.__FilterObj(publishes_filter))
-        #if filter_compare(previous_filter, publishes_filter):
-        #    selected_idx = 1
-        #
-        ## add rest of users
-        #if users:
-        #    # add some separators!
-        #    self._ui.filter_combo.insertSeparator(2)
-        #
-        #    for user in users:
-        #        if current_user is not None and user["id"] == current_user["id"]:
-        #            # already added
-        #            continue
-        #    
-        #        filter = {"mode":FileListView.WORKFILES_MODE, "user":user}
-        #    
-        #        if filter_compare(previous_filter, filter):
-        #            selected_idx = self._ui.filter_combo.count()
-        #        
-        #        self._ui.filter_combo.addItem("Show Files in %s's Work Area" % user["name"], self.__FilterObj(filter))
-        #        
-        ## set the current index:
-        #self._ui.filter_combo.setCurrentIndex(selected_idx)
-        
     def _get_current_filter(self):
         """
         Get the current filter
         """
-        
         filter = {}
         idx = self._ui.filter_combo.currentIndex()
         if idx >= 0:
