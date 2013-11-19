@@ -16,9 +16,7 @@ import urllib
 import tank
 from tank.platform.qt import QtCore, QtGui
 
-from .work_file import WorkFile
 from .file_list_view import FileListView
-
 from .file_filter import FileFilter
 
 
@@ -29,15 +27,15 @@ class WorkFilesForm(QtGui.QWidget):
     
     # signals - note, 'object' is used to avoid 
     # issues with PyQt when None is passed
-    open_publish = QtCore.Signal(object, object, bool)#WorkFile, WorkFile, bool
-    open_workfile = QtCore.Signal(object, object, bool)#WorkFile, WorkFile, bool
-    open_previous_publish = QtCore.Signal(object)#WorkFile
-    open_previous_workfile = QtCore.Signal(object)#WorkFile
+    open_publish = QtCore.Signal(object, object, bool)#FileItem, FileItem, bool
+    open_workfile = QtCore.Signal(object, object, bool)#FileItem, FileItem, bool
+    open_previous_publish = QtCore.Signal(object)#FileItem
+    open_previous_workfile = QtCore.Signal(object)#FileItem
     
     new_file = QtCore.Signal()
     
     show_in_fs = QtCore.Signal()
-    show_in_shotgun = QtCore.Signal(object)#WorkFile
+    show_in_shotgun = QtCore.Signal(object)#FileItem
     
     def __init__(self, app, handler, parent = None):
         """

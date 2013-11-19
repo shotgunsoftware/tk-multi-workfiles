@@ -16,7 +16,7 @@ import tank
 from tank.platform.qt import QtCore, QtGui
 browser_widget = tank.platform.import_framework("tk-framework-widget", "browser_widget")
 
-from .work_file import WorkFile
+from .file_item import FileItem
 
 from .file_filter import FileFilter
 
@@ -24,9 +24,9 @@ class FileListView(browser_widget.BrowserWidget):
     
     # signals - note, 'object' is used to avoid 
     # issues with PyQt when None is passed
-    open_previous_workfile = QtCore.Signal(object)#WorkFile
-    open_previous_publish = QtCore.Signal(object)#WorkFile
-    view_in_shotgun = QtCore.Signal(object)#WorkFile
+    open_previous_workfile = QtCore.Signal(object)#FileItem
+    open_previous_publish = QtCore.Signal(object)#FileItem
+    view_in_shotgun = QtCore.Signal(object)#FileItem
     
     NO_TASK_NAME = "No Task"
     

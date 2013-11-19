@@ -11,7 +11,7 @@
 import os
 from datetime import datetime, timedelta
 
-class WorkFile(object):
+class FileItem(object):
     """
     Encapsulate details about a work file
     """
