@@ -26,7 +26,7 @@ from .scene_operation import reset_current_scene, prepare_new_scene, open_file, 
 
 from .file_list_view import FileListView
 
-from . import constants
+from .file_filter import FileFilter
 
 class WorkFiles(object):
     
@@ -110,7 +110,7 @@ class WorkFiles(object):
         Will return a WorkFile instance for every file found in both
         work and publish areas
         """
-        user = filter.get("user")
+        user = filter.user
         
         if not self._work_template:
             return []
@@ -373,18 +373,24 @@ class WorkFiles(object):
         
         return name 
         
-    def _on_show_in_file_system(self, work_area, user):
+    def _on_show_in_file_system(self):
         """
         Show the work area/publish area path in the file system
         """
+        # get the current filter being used:
+        current_filter = self._workfiles_ui.filter
+        
         try:
             # first, determine which template to use:
-            template = self._work_area_template if work_area else self._publish_area_template
+            template = self._work_area_template
+            if (current_filter.mode == FileFilter.PUBLISHES_MODE):
+                template = self._publish_area_template
+            
             if not self._context or not template:
                 return
             
             # construct a new context to use for the search overriding the user if required:
-            work_area_ctx = self._context if not user else self._context.create_copy_for_user(user)
+            work_area_ctx = self._context if not current_filter.user else self._context.create_copy_for_user(current_filter.user)
             
             # now build fields to construct path with:
             fields = work_area_ctx.as_template_fields(template)
@@ -1132,18 +1138,18 @@ class WorkFiles(object):
         current_user = tank.util.get_current_user(self._app.tank)
         
         # always add workfiles filter:
-        filters.append({"menu_label":"Show Files in my Work Area", 
+        filters.append(FileFilter({"menu_label":"Show Files in my Work Area", 
                         "list_title":"Available Work Files",
                         "show_in_file_system":True,
                         "user":current_user,
-                        "mode":constants.WORKFILES_MODE})
+                        "mode":FileFilter.WORKFILES_MODE}))
         
         # add publishes filter:
         if self._publish_template:
-            filters.append({"menu_label":"Show Files in the Publish Area", 
+            filters.append(FileFilter({"menu_label":"Show Files in the Publish Area", 
                             "list_title":"Available Publishes",
                             "show_in_file_system":True,
-                            "mode":constants.PUBLISHES_MODE})
+                            "mode":FileFilter.PUBLISHES_MODE}))
           
         # add user sandbox filters:
         users = self._get_usersandbox_users()
@@ -1154,11 +1160,11 @@ class WorkFiles(object):
             if current_user is not None and user["id"] == current_user["id"]:
                 continue
             
-            filters.append({"menu_label":"Show Files in %s's Work Area" % user["name"],
+            filters.append(FileFilter({"menu_label":"Show Files in %s's Work Area" % user["name"],
                             "list_title":"%s's Work Files" % user["name"],
                             "show_in_file_system":True,
                             "user":user,
-                            "mode":constants.WORKFILES_MODE})
+                            "mode":FileFilter.WORKFILES_MODE}))
             
         # and finally, allow hook to define additional filters:
         additional_filters = self._app.execute_hook("hook_additional_filters")
@@ -1166,12 +1172,13 @@ class WorkFiles(object):
             # validate additional filters:
             for filter in additional_filters:
                 if filter.get("mode") == "publishes":
-                    filter["mode"] = constants.PUBLISHES_MODE
+                    filter["mode"] = FileFilter.PUBLISHES_MODE
                 else:
-                    filter["mode"] = constants.WORKFILES_MODE
+                    filter["mode"] = FileFilter.WORKFILES_MODE
+            # ...
             
             filters.append("separator")
-            filters.extend(additional_filters)
+            filters.extend([FileFilter(filter) for filter in additional_filters])
         
         return filters
     
