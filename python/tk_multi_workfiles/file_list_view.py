@@ -17,7 +17,6 @@ from tank.platform.qt import QtCore, QtGui
 browser_widget = tank.platform.import_framework("tk-framework-widget", "browser_widget")
 
 from .file_item import FileItem
-
 from .file_filter import FileFilter
 
 class FileListView(browser_widget.BrowserWidget):
@@ -57,10 +56,25 @@ class FileListView(browser_widget.BrowserWidget):
             return selected_item.work_file
         return None
     
+    # Enable to force all work to be done in the main thread
+    # which can help when debugging
+    DEBUG_GET_DATA_IN_MAIN_THREAD=False
+    
     def get_data(self, data):
         """
         Called by browser widget in worker thread to query the list
         of files to display for the specified context
+        """
+        if FileListView.DEBUG_GET_DATA_IN_MAIN_THREAD:
+            # debug only - _get_data will be called first in
+            # process_result which runs in the main thread
+            return data
+        else:
+            return self._get_data(data)
+        
+    def _get_data(self, data):
+        """
+        Retrieve the list of files to display
         """
         result = {"task_groups":{}, "task_name_order":{}}
         
@@ -194,6 +208,9 @@ class FileListView(browser_widget.BrowserWidget):
         """
         Process list of tasks retrieved by get_data on the main thread
         """
+        if FileListView.DEBUG_GET_DATA_IN_MAIN_THREAD:
+            result = self._get_data(result)
+        
         task_groups = result["task_groups"]
         task_name_order = result["task_name_order"]
         task_order = result["task_order"]
