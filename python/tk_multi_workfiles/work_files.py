@@ -12,6 +12,7 @@ import sys
 import os
 from itertools import chain
 from datetime import datetime
+from pprint import pprint
 
 import tank
 from tank.platform.qt import QtCore, QtGui 
@@ -79,16 +80,6 @@ class WorkFiles(object):
         """
         Show the main tank file manager dialog 
         """
-        # (AD) - DEBUG
-        do_find_files_debug = True
-        if do_find_files_debug:
-            try:
-                print self.find_files(None)
-                return
-            except:
-                self._app.log_exception("Something very bad has gone wrong!")
-                return
-        
         try:
             from .work_files_form import WorkFilesForm
             self._workfiles_ui = self._app.engine.show_dialog("Shotgun File Manager", self._app, WorkFilesForm, self._app, self)
@@ -109,10 +100,11 @@ class WorkFiles(object):
 
     def _find_files(self, file_type, work_template, publish_template, context, *args, **kwargs):
         """
-        temp hook for finding files!
-        
+        Find files to present using 'hook_find_files' hook
+
+        Returned fields should contain:
+
         Common fields:
-    
             # required
             path
             key
@@ -124,7 +116,6 @@ class WorkFiles(object):
             description
         
         Additional published file fields:
-        
             thumbnail
             published_at
             published_by
@@ -134,10 +125,6 @@ class WorkFiles(object):
         files = self._app.execute_hook("hook_find_files", file_type=file_type, work_template=work_template, 
                                        publish_template=publish_template, context=context)
 
-        from pprint import pprint
-        print "FILES of type %s:" % file_type
-        pprint (files)
-
         if not files or not isinstance(files, list):
             return []
             
@@ -145,8 +132,9 @@ class WorkFiles(object):
         valid_files = []
         for f in files:
             if isinstance(f, dict) and "path" in f and "key" in f:
-                if "version" not in f:
-                    f["version"] = None
+                if f.get("version", None) == None:
+                    # make sure version is an integer
+                    f["version"] = 0
                 valid_files.append(f)
             else:
                 # log warning?
@@ -234,12 +222,14 @@ class WorkFiles(object):
             version = published_file["version"]
             
             # look to see if we have a matching work file for this published file
+            have_work_file = False
             work_path = None
             work_file_item = files.get((key, version))
             if work_file_item:
                 # we do so copy file details across from work file:
                 work_path = work_file_item.path
                 file_details = work_file_item.details
+                have_work_file = True
             else:
                 # no work file so just use publish details:
                 file_details["name"] = published_file.get("name")                
@@ -272,7 +262,7 @@ class WorkFiles(object):
                 file_details["name"] = key_to_name_map[key]
                     
             # add new file item
-            file_item = FileItem(work_path, publish_path, work_file != None, True, file_details)
+            file_item = FileItem(work_path, publish_path, have_work_file, True, file_details)
             files[(key, version)] = file_item
 
             if update_name_map:
