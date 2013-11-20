@@ -79,8 +79,15 @@ class WorkFiles(object):
         """
         Show the main tank file manager dialog 
         """
-        #print self.find_files({})
-        #return
+        # (AD) - DEBUG
+        do_find_files_debug = True
+        if do_find_files_debug:
+            try:
+                print self.find_files(None)
+                return
+            except:
+                self._app.log_exception("Something very bad has gone wrong!")
+                return
         
         try:
             from .work_files_form import WorkFilesForm
@@ -127,6 +134,10 @@ class WorkFiles(object):
         files = self._app.execute_hook("hook_find_files", file_type=file_type, work_template=work_template, 
                                        publish_template=publish_template, context=context)
 
+        from pprint import pprint
+        print "FILES of type %s:" % file_type
+        pprint (files)
+
         if not files or not isinstance(files, list):
             return []
             
@@ -153,7 +164,7 @@ class WorkFiles(object):
         Will return a FileItem instance for every file found in both
         work and publish areas
         """
-        user = filter.user
+        user = filter.user if filter else tank.util.get_current_user(self._app.tank)
         
         if not self._work_template:
             return []
