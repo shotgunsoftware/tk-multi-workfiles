@@ -97,45 +97,6 @@ class WorkFiles(object):
         self._workfiles_ui.show_in_fs.connect(self._on_show_in_file_system)
         self._workfiles_ui.show_in_shotgun.connect(self._on_show_in_shotgun)
         
-
-    def _find_files(self, context):
-        """
-        Find files to present using 'hook_find_files' hook
-
-        Returned fields should contain:
-
-            # required
-            path
-                
-            # optional
-            version
-            thumbnail
-            name
-            task
-            description
-            
-            # additional published file fields:
-            published_at
-            published_by
-            published_file_entity_id
-        """
-        # call out to hook to provide list of files:
-        all_files = self._app.execute_hook("hook_find_files", work_template=self._work_template, 
-                                       publish_template=self._publish_template, context=context)
-
-        if not all_files or not isinstance(all_files, dict):
-            return {}
-            
-        # validate returned files:
-        for file_type in ["publish", "work"]:
-            files = all_files.get(file_type)
-            if files:
-                files = [f for f in files if isinstance(f, dict) and "path" in f]
-            all_files[file_type] = files
-            
-        return all_files
-        
-        
     def find_files(self, filter):
         """
         Find files using the current context, work and publish templates
@@ -160,7 +121,9 @@ class WorkFiles(object):
         find_ctx = self._context if not user else self._context.create_copy_for_user(user)
 
         # find all work & publish files and filter out any that should be ignored:
-        all_files = self._find_files(find_ctx)
+        from .find_files import find_all_files
+        all_files = find_all_files(self._app, self._work_template, self._publish_template, find_ctx)
+
         published_files = all_files.get("publish", [])
         published_files = [pf for pf in published_files if not self._ignore_file_path(pf["path"])]
         work_files = all_files.get("work", [])
@@ -190,7 +153,7 @@ class WorkFiles(object):
             
             # get version from fields if not specified in work file:
             if file_details["version"] == None:
-                file_details["version"] = wf_fields.get("version") or 0
+                file_details["version"] = wf_fields.get("version", 0)
             
             # if no task try to determine from context or path:
             if not file_details["task"]:
@@ -272,7 +235,7 @@ class WorkFiles(object):
             
             # get version from fields if not specified in work file:
             if file_details["version"] == None:
-                file_details["version"] = publish_fields.get("version") or 0
+                file_details["version"] = publish_fields.get("version", 0)
             
             # look to see if we have a matching work file for this published file
             have_work_file = False
@@ -840,9 +803,14 @@ class WorkFiles(object):
         """
         Get the next available version
         """
+        from .find_files import find_all_files
+        all_files = find_all_files(self._app, self._work_template, self._publish_template, self._context)
+        
         from .versioning import Versioning
         versioning = Versioning(self._app, self._work_template, self._publish_template, self._context)
-        return versioning.get_next_available_version(fields)
+        max_work_version, max_publish_version = versioning.get_max_version(all_files, fields)
+        max_version = max(max_work_version, max_publish_version) or 0
+        return max_version + 1
 
     def _on_new_file(self):
         """

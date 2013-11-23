@@ -20,7 +20,6 @@ from pprint import pprint
 from .async_worker import AsyncWorker
 from .scene_operation import get_current_path, save_file, SAVE_FILE_AS_ACTION
 
-
 class SaveAs(object):
     """
     
@@ -43,6 +42,8 @@ class SaveAs(object):
         self._work_template = self._app.get_template("template_work")
         self._publish_template = self._app.get_template("template_publish")
         
+        self._cached_files = None
+        
     def _show_save_as_dlg(self):
         """
         Show the save as dialog
@@ -60,7 +61,7 @@ class SaveAs(object):
             return
         
         # determine if this is a publish path or not:
-        is_publish = self._publish_template and self._publish_template.validate(current_path)
+        is_publish = self._publish_template.validate(current_path) and self._publish_template != self._work_template
         
         # see if name is used in the work template:
         name_is_used = "name" in self._work_template.keys
@@ -134,6 +135,9 @@ class SaveAs(object):
             preview_updater = AsyncWorker(worker_cb)
             preview_updater.start()
             while True:
+                # reset cached files just in case something has changed:
+                self._cached_files = None
+                
                 # show modal dialog:
                 from .save_as_form import SaveAsForm
                 (res, form) = self._app.engine.show_modal(title, self._app, SaveAsForm, preview_updater, is_publish, name_is_used, name, version_is_used)
@@ -226,17 +230,21 @@ class SaveAs(object):
             # clear the current name:
             if "name" in fields:
                 del fields["name"]
+
+        # if we haven't cached the file list already, do it now:
+        if not self._cached_files:
+            from .find_files import find_all_files            
+            self._cached_files = find_all_files(self._app, self._work_template, self._publish_template, self._app.context)
+
+        # find the max work file and publish versions:
+        from .versioning import Versioning
+        versioning = Versioning(self._app)
+        max_work_version, max_publish_version = versioning.get_max_version(self._cached_files, fields)
+        max_version = max(max_work_version, max_publish_version)
                 
         if has_version_field:
             # get the current version:
             current_version = fields.get("version")
-            
-            # find the current max work file and publish versions:
-            from .versioning import Versioning
-            versioning = Versioning(self._app)
-            max_work_version = versioning.get_max_workfile_version(fields)
-            max_publish_version = versioning.get_max_publish_version(fields)
-            max_version = max(max_work_version, max_publish_version)
             
             # now depending on what the source was 
             # and if the name has been changed:
@@ -257,7 +265,7 @@ class SaveAs(object):
                     can_reset_version = False
                     new_version = max_version + 1
                     
-                    if max_version == max_work_version:
+                    if max_work_version > max_publish_version:
                         if has_name_field:
                             msg = "A work file with this name already exists.  If you proceed, your file will use the next available version number."
                         else:
@@ -267,7 +275,7 @@ class SaveAs(object):
                         if has_name_field:
                             msg = "A publish file with this name already exists.  If you proceed, your file will use the next available version number."
                         else:
-                            msg = "A previous version of this published file already exists.  If you proceed, your file will use the next available version number."
+                            msg = "A published version of this file already exists.  If you proceed, your file will use the next available version number."
                         
                 else:
                     # don't have an existing version
@@ -278,17 +286,16 @@ class SaveAs(object):
                         
             if new_version:
                 fields["version"] = new_version
+
+        else:
+            # handle when version isn't in the work template:
+            if max_work_version != None and max_work_version >= max_publish_version:
+                msg = "A file with this name already exists.  If you proceed, the existing file will be overwritten."
+            elif max_publish_version:
+                msg = "A published version of this file already exists."
                 
         # create the new path                
         new_work_path = self._work_template.apply_fields(fields)
-        
-        if not has_version_field:
-            # no version, so just warn if there is already a file:
-            if os.path.exists(new_work_path):
-                msg = "A file with this name already exists.  If you proceed, the existing file will be overwritten."
-                
-            # (AD) - what about if the file is in another location, e.g. a Perforce depot or another site?
-            # - should this be exposed through a hook as well??
         
         return {"path":new_work_path, "message":msg, "can_reset_version":can_reset_version}
 
