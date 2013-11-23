@@ -26,7 +26,7 @@ configuration:
 
     template_publish:
         type: template
-        fields: context, version, *
+        fields: context, [version], *
         description: A reference to a template which locates a publish file on disk.
         allows_empty: True
            
@@ -87,17 +87,10 @@ configuration:
         default_value: copy_file
         description: Specify a hook that will be used to copy the file 'source_path' 
                      to 'target_path'.
-           
-    hook_additional_filters:
-        type: hook
-        parameters: []
-        default_value: additional_filters
-        description: Specify a hook that will return a list of additional filters that
-                     can be used to filter the file list.
                      
     hook_find_files:
         type: hook
-        parameters: []
+        parameters: [work_template, publish_template, context]
         default_value: find_files
         description: Specify a hook that will return a list of files to be displayed in
                      the file list.
