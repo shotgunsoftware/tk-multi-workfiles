@@ -58,7 +58,7 @@ class FileListView(browser_widget.BrowserWidget):
     
     # Enable to force all work to be done in the main thread
     # which can help when debugging
-    DEBUG_GET_DATA_IN_MAIN_THREAD=False
+    DEBUG_GET_DATA_IN_MAIN_THREAD=True
     
     def get_data(self, data):
         """

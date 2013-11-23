@@ -25,6 +25,9 @@ class FileItem(object):
         self._is_published = is_published
         self._details = details
 
+    def __repr__(self):
+        return "%s (v%d), is_local:%s, is_publish: %s" % (self.name, self.version, self.is_local, self.is_published)
+
     """
     General details
     """
