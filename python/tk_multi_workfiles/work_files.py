@@ -1096,15 +1096,15 @@ class WorkFiles(object):
         if users:
             filters.append("separator")
             
-        for user in users:
-            if current_user is not None and user["id"] == current_user["id"]:
-                continue
-            
-            filters.append(FileFilter({"menu_label":"Show Files in %s's Work Area" % user["name"],
-                            "list_title":"%s's Work Files" % user["name"],
-                            "show_in_file_system":True,
-                            "user":user,
-                            "mode":FileFilter.WORKFILES_MODE}))
+            for user in users:
+                if current_user is not None and user["id"] == current_user["id"]:
+                    continue
+                
+                filters.append(FileFilter({"menu_label":"Show Files in %s's Work Area" % user["name"],
+                                "list_title":"%s's Work Files" % user["name"],
+                                "show_in_file_system":True,
+                                "user":user,
+                                "mode":FileFilter.WORKFILES_MODE}))
             
         # and finally, allow hook to define additional filters:
         #

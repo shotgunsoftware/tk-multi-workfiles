@@ -135,6 +135,8 @@ class WorkFilesForm(QtGui.QWidget):
         published_file = self._ui.file_list.selected_published_file
                 
         current_filter = self._get_current_filter()
+        if not current_filter:
+            return
         
         if current_filter.mode == FileFilter.WORKFILES_MODE:
             self.open_workfile.emit(work_file, published_file, False)            
@@ -196,6 +198,8 @@ class WorkFilesForm(QtGui.QWidget):
         """
         # get the file filter:
         filter = self._get_current_filter()
+        if not filter:
+            return
         
         # hide/show the show-in-filesystem link:
         self._ui.show_in_fs_label.setVisible(filter.show_in_file_system)
@@ -270,6 +274,7 @@ class WorkFilesForm(QtGui.QWidget):
         """
         filter = None
         idx = self._ui.filter_combo.currentIndex()
+
         if idx >= 0:
             filter = self._ui.filter_combo.itemData(idx)
             
