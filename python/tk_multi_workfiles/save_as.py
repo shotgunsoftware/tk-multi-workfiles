@@ -74,8 +74,11 @@ class SaveAs(object):
                 fields = self._publish_template.get_fields(current_path)
                 name = fields.get("name")
             else:
-                # get the default name from settings:
-                default_name = self._app.get_setting("saveas_default_name")
+                # get the default name from settings via a hook:
+                default_name = self._app.execute_hook("hook_name_scene",
+                                                      app = self._app,
+                                                      context =  self._app.context)
+                                                      
                 if not default_name and not name_is_optional:
                     # name isn't optional so we should use something:
                     default_name = "scene"

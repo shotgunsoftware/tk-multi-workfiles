@@ -87,6 +87,13 @@ configuration:
         default_value: copy_file
         description: Specify a hook that will be used to copy the file 'source_path' 
                      to 'target_path'.
+                     
+    hook_name_scene:
+        type: hook
+        parameters: [app, context]
+        default_value: name_scene
+        description:Specify a hook that will be used to calculate the value used in name
+                    variable of the scene file name.
            
     file_extensions:
         type: list
