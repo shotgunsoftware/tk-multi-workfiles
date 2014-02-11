@@ -61,12 +61,10 @@ class FindFiles(Hook):
         
         published_files = []
         for sg_file in sg_res:
-            if not sg_file.get("path"):
-                # don't care about files without a path!
-                continue
             
-            # get the local path:
-            path = sg_file.get("path").get("local_path")
+            path = sg_file.get("path", {}).get("local_path")
+            if not path:
+                continue
 
             # make sure path matches the publish template:            
             if not publish_template.validate(path):
