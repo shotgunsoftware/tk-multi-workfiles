@@ -81,7 +81,7 @@ class TaskBrowserWidget(browser_widget.BrowserWidget):
 
         # gather all the fields to pull
         fields = ["content", "task_assignees", "image", "sg_status_list", "step.Step.list_order"]
-        extra_fields = self._app.get_setting('task_extra_display_fields', [])
+        extra_fields = self._app.get_setting("task_extra_display_fields", [])
         fields.extend(extra_fields)
 
         if data["own_tasks_only"]:
@@ -155,7 +155,7 @@ class TaskBrowserWidget(browser_widget.BrowserWidget):
 
                 # figure out the name to display for the task
                 task_name = "<b>Task: %s</b>" % d.get("content", "")
-                extra_fields = self._app.get_setting('task_extra_display_fields', [])
+                extra_fields = self._app.get_setting("task_extra_display_fields", [])
                 name_extension = ", ".join([d.get(f) for f in extra_fields])
                 if name_extension:
                     task_name = task_name + " (%s)" % name_extension
