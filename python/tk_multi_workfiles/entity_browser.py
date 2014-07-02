@@ -98,7 +98,7 @@ class EntityBrowserWidget(browser_widget.BrowserWidget):
                     filter.extend(entities_to_load[et])
                     entities = self._app.shotgun.find(et, 
                                                       [ filter ],
-                                                      query_fields + self.__entity_type_extra_fields.get(et, []),  
+                                                      query_fields + self.__entity_type_extra_fields.get(et, {}).values(),  
                                                       [{"field_name": "code", "direction": "asc"}])
                                         
                     # append to results:
@@ -116,7 +116,7 @@ class EntityBrowserWidget(browser_widget.BrowserWidget):
                 # get entities from shotgun:
                 entities = self._app.shotgun.find(et, 
                                                   sg_filters, 
-                                                  query_fields + self.__entity_type_extra_fields.get(et, []),
+                                                  query_fields + self.__entity_type_extra_fields.get(et, {}).values(),
                                                   [{"field_name": "code", "direction": "asc"}])
                                 
                 # append to results:
@@ -154,8 +154,11 @@ class EntityBrowserWidget(browser_widget.BrowserWidget):
                 details = "<b>%s %s</b>" % (tank.util.get_entity_type_display_name(self._app.tank, entity_type), 
                                             d.get("code"))
                 
-                # retrieve any extra info to display in the UI:
-                extra_info = ", ".join(str(d.get(f)) for f in self.__entity_type_extra_fields.get(entity_type, []))
+                # retrieve any extra info to display in the UI.  extra_fields is a dictionary of 'label:field'
+                # pairs for the current entity type.
+                extra_fields = self.__entity_type_extra_fields.get(entity_type, {})
+                extra_info = ", ".join(["%s: %s" % (label, str(d.get(field))) 
+                                        for label, field in extra_fields.iteritems()])
                 if extra_info:
                     details += "<br>(%s)" % extra_info
 

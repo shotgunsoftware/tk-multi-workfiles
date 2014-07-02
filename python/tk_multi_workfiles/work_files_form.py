@@ -327,15 +327,16 @@ class WorkFilesForm(QtGui.QWidget):
                 self._ui.entity_pages.setCurrentWidget(self._ui.entity_page)
                 self._ui.entity_pages.setVisible(True)
 
-                # get any extra fields that have been defined for this entity type:                
-                extra_fields = self._app.get_setting("sg_entity_type_extra_display_fields", {}).get(ctx.entity["type"], [])
+                # get any extra fields that have been defined for this entity type.  This will be a dictionary
+                # of label:field pairs for the current entity type:      
+                extra_fields = self._app.get_setting("sg_entity_type_extra_display_fields", {}).get(ctx.entity["type"], {})
                 
                 # get additional details:
                 sg_details = {}
                 try:
                     sg_details = self._app.shotgun.find_one(ctx.entity["type"], 
                                                             [["project", "is", ctx.project], ["id", "is", ctx.entity["id"]]], 
-                                                            ["description", "image", "code"] + extra_fields)
+                                                            ["description", "image", "code"] + extra_fields.values())
                 except:
                     pass
     
@@ -354,8 +355,9 @@ class WorkFilesForm(QtGui.QWidget):
                         entity_thumbnail = QtGui.QPixmap(thumbnail_path)
                 self._set_thumbnail(self._ui.entity_thumbnail, entity_thumbnail)
                                     
-                # description:
-                extra_info = ", ".join(str(sg_details.get(f)) for f in extra_fields)
+                # description including the display of extra fields:
+                extra_info = ", ".join(["%s: %s" % (label, str(sg_details.get(field))) 
+                                        for label, field in extra_fields.iteritems()])                
                 desc = ""
                 if extra_info:
                     desc += "(%s)<br>" % extra_info
