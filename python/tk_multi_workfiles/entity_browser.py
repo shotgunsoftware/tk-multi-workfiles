@@ -30,10 +30,11 @@ class EntityBrowserWidget(browser_widget.BrowserWidget):
         """
         browser_widget.BrowserWidget.__init__(self, parent)
 
-        # cache the settings we're going to use:        
-        self.__entity_types_to_load = None
-        self.__entity_type_filters = None
-        self.__entity_type_extra_fields = None
+        # cache the settings we're going to use:
+        app = tank.platform.current_bundle()
+        self.__entity_types_to_load = app.get_setting("sg_entity_types", [])
+        self.__entity_type_filters = app.get_setting("sg_entity_type_filters", {})
+        self.__entity_type_extra_fields = app.get_setting("sg_entity_type_extra_display_fields", {})
         
         # only load this once!
         self._current_user = None
@@ -49,18 +50,6 @@ class EntityBrowserWidget(browser_widget.BrowserWidget):
             return selected_item.sg_data
         return None
 
-    def __load_settings(self):
-        """
-        Load settings we need.  This can't be done in the constructor because
-        the app isn't known at that point!
-        """
-        if self.__entity_types_to_load == None:
-            self.__entity_types_to_load = self._app.get_setting("sg_entity_types", [])
-        if self.__entity_type_filters == None:
-            self.__entity_type_filters = self._app.get_setting("sg_entity_type_filters", {})
-        if self.__entity_type_extra_fields == None:
-            self.__entity_type_extra_fields = self._app.get_setting("sg_entity_type_extra_display_fields", {})
-        
     def get_data(self, data):
         """
         Executed in a background worker thread from the entity browser widget to retrieve entity
@@ -70,10 +59,6 @@ class EntityBrowserWidget(browser_widget.BrowserWidget):
         :returns:       Retrieved and processed entity data that will be used to populate 
                         the widget on the main UI thread
         """
-        
-        # make sure all the settings we need to use are loaded:
-        self.__load_settings()
-
         current_entity = data.get("entity")
             
         if not self._current_user_loaded:

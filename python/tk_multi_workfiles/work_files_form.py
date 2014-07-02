@@ -326,9 +326,9 @@ class WorkFilesForm(QtGui.QWidget):
                 # work area defined - yay!
                 self._ui.entity_pages.setCurrentWidget(self._ui.entity_page)
                 self._ui.entity_pages.setVisible(True)
-                
-                extra_fields = self._app.get_setting("sg_entity_type_extra_display_fields", {})
-                extra_fields = extra_fields.get(ctx.entity["type"], [])         
+
+                # get any extra fields that have been defined for this entity type:                
+                extra_fields = self._app.get_setting("sg_entity_type_extra_display_fields", {}).get(ctx.entity["type"], [])
                 
                 # get additional details:
                 sg_details = {}
