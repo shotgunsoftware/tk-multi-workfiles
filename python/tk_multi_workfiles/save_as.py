@@ -156,6 +156,7 @@ class SaveAs(object):
                 from .save_as_form import SaveAsForm
                 (res, form) = self._app.engine.show_modal(title, self._app, SaveAsForm, preview_updater, 
                                                           is_publish, name_is_used, name, version_is_used)
+                print "RES: %s" % res
                 
                 if res == QtGui.QDialog.Accepted:
                     # get details from UI:
