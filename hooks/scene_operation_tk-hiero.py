@@ -83,10 +83,14 @@ class SceneOperation(Hook):
             # save the current script:
             project = self._get_current_project()
             project.save()
+
+            self.set_project_root(project)
         
         elif operation == "save_as":
             project = self._get_current_project()
             project.saveAs(file_path.replace(os.path.sep, "/"))
+            
+            self.set_project_root(project)
 
         elif operation == "reset":
             # do nothing and indicate scene was reset to empty
@@ -117,3 +121,14 @@ class SceneOperation(Hook):
             raise TankError("Please select a Hiero Project!")
          
         return project
+
+
+    def set_project_root(self, project):
+        """ If we're saving inside this SGTK project, set the 
+        projectroot.
+        """
+        sgtk_project_path = self.parent.tank.project_path
+
+        if (project.path().startswith(sgtk_project_path) and 
+                not project.projectRoot().startswith(sgtk_project_path)):
+            project.setProjectRoot(sgtk_project_path)
