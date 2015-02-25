@@ -8,6 +8,11 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
+# The Modo engine is not supported by Shotgun but has been graciously
+# contributed to the community by Walking The Dog and Lutz Paelike.
+# It can be found at:
+# https://github.com/tremolo/tk-modo
+
 import os
 
 import tank
