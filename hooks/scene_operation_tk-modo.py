@@ -20,7 +20,6 @@ from tank import Hook
 from tank import TankError
 from tank.platform.qt import QtGui
 
-import modoshotgunsupport
 
 class SceneOperation(Hook):
     """
@@ -62,6 +61,7 @@ class SceneOperation(Hook):
                                                  state, otherwise False
                                 all others     - None
         """
+        import modoshotgunsupport
         
         if operation == "current_path":
             return modoshotgunsupport.get_scene_filename()
