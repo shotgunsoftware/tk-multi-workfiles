@@ -18,11 +18,9 @@ from tank.platform.qt import QtGui
 
 class SceneOperation(Hook):
     """
-    Hook called to perform an operation with the 
-    current scene
+    Hook called to perform an operation with the current scene.
     """
-    
-    def execute(self, operation, file_path, context, parent_action, file_version, read_only, **kwargs):
+    def execute(self, *args, **kwargs):
         """
         Main hook entry point
         
@@ -56,7 +54,56 @@ class SceneOperation(Hook):
                                                  state, otherwise False
                                 all others     - None
         """
+        if self.parent.engine.hiero_enabled:
+            return self._hiero_execute(*args, **kwargs)
+        else:
+            return self._nuke_execute(*args, **kwargs)
+
+    def _hiero_execute(self, operation, file_path, context, parent_action, file_version, read_only, **kwargs):
+        import hiero
+
+        if operation == "current_path":
+            # return the current script path
+            project = self._get_current_project()
+            curr_path = project.path().replace("/", os.path.sep)
+            return curr_path
+
+        elif operation == "open":
+            # Manually fire the kBeforeProjectLoad event in order to work around a bug in Hiero.
+            # The Foundry has logged this bug as:
+            #   Bug 40413 - Python API - kBeforeProjectLoad event type is not triggered 
+            #   when calling hiero.core.openProject() (only triggered through UI)
+            # It exists in all versions of Hiero through (at least) v1.9v1b12. 
+            #
+            # Once this bug is fixed, a version check will need to be added here in order to 
+            # prevent accidentally firing this event twice. The following commented-out code
+            # is just an example, and will need to be updated when the bug is fixed to catch the 
+            # correct versions.
+            # if (hiero.core.env['VersionMajor'] < 1 or 
+            #     hiero.core.env['VersionMajor'] == 1 and hiero.core.env['VersionMinor'] < 10:
+            hiero.core.events.sendEvent("kBeforeProjectLoad", None)
+
+            # open the specified script
+            hiero.core.openProject(file_path.replace(os.path.sep, "/"))
         
+        elif operation == "save":
+            # save the current script:
+            project = self._get_current_project()
+            project.save()
+        
+        elif operation == "save_as":
+            project = self._get_current_project()
+            project.saveAs(file_path.replace(os.path.sep, "/"))
+
+        elif operation == "reset":
+            # do nothing and indicate scene was reset to empty
+            return True
+        
+        elif operation == "prepare_new":
+            # add a new project to hiero
+            hiero.core.newProject()
+    
+    def _nuke_execute(self, operation, file_path, context, parent_action, file_version, read_only, **kwargs):
         if file_path:
             file_path = file_path.replace("/", os.path.sep)
         
@@ -115,6 +162,27 @@ class SceneOperation(Hook):
             nuke.scriptClear()
             
             return True
+
+    def _get_current_project(self):
+        """
+        Returns the current project based on where in the UI the user clicked 
+        """
+        
+        # get the menu selection from hiero engine
+        selection = self.parent.engine.get_menu_selection()
+
+        if len(selection) != 1:
+            raise TankError("Please select a single Project!")
+        
+        if not isinstance(selection[0] , hiero.core.Bin):
+            raise TankError("Please select a Hiero Project!")
+            
+        project = selection[0].project()
+        if project is None:
+            # apparently bins can be without projects (child bins I think)
+            raise TankError("Please select a Hiero Project!")
+         
+        return project
         
     def _reset_write_node_render_paths(self):
         """
