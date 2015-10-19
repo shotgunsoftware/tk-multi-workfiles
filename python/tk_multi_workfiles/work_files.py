@@ -1002,6 +1002,7 @@ class WorkFiles(object):
             self._app.name,
             self._app.tank,
             context,
+            compare_instance_name=True,
         )
         
         if len(other_settings) == 1:
