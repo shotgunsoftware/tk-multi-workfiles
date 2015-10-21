@@ -167,7 +167,7 @@ class SceneOperation(Hook):
         """
         Returns the current project based on where in the UI the user clicked 
         """
-        
+        import hiero
         # get the menu selection from hiero engine
         selection = self.parent.engine.get_menu_selection()
 
