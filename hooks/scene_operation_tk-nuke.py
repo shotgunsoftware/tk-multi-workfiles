@@ -54,7 +54,8 @@ class SceneOperation(Hook):
                                                  state, otherwise False
                                 all others     - None
         """
-        if self.parent.engine.hiero_enabled:
+        engine = self.parent.engine
+        if if hasattr(engine, "hiero_enabled") and engine.hiero_enabled:
             return self._hiero_execute(*args, **kwargs)
         else:
             return self._nuke_execute(*args, **kwargs)
@@ -67,7 +68,6 @@ class SceneOperation(Hook):
             project = self._get_current_project()
             curr_path = project.path().replace("/", os.path.sep)
             return curr_path
-
         elif operation == "open":
             # Manually fire the kBeforeProjectLoad event in order to work around a bug in Hiero.
             # The Foundry has logged this bug as:
@@ -85,20 +85,16 @@ class SceneOperation(Hook):
 
             # open the specified script
             hiero.core.openProject(file_path.replace(os.path.sep, "/"))
-        
         elif operation == "save":
             # save the current script:
             project = self._get_current_project()
             project.save()
-        
         elif operation == "save_as":
             project = self._get_current_project()
             project.saveAs(file_path.replace(os.path.sep, "/"))
-
         elif operation == "reset":
             # do nothing and indicate scene was reset to empty
             return True
-        
         elif operation == "prepare_new":
             # add a new project to hiero
             hiero.core.newProject()
@@ -110,7 +106,6 @@ class SceneOperation(Hook):
         if operation == "current_path":
             # return the current script path
             return nuke.root().name().replace("/", os.path.sep)
-        
         elif operation == "open":
             # open the specified script
             nuke.scriptOpen(file_path)
@@ -119,11 +114,9 @@ class SceneOperation(Hook):
             if self._reset_write_node_render_paths():
                 # something changed so make sure to save the script again:
                 nuke.scriptSave()
-            
         elif operation == "save":
             # save the current script:
             nuke.scriptSave()
-            
         elif operation == "save_as":
             old_path = nuke.root()["name"].value()
             try:
@@ -139,7 +132,6 @@ class SceneOperation(Hook):
                 # something went wrong so reset to old path:
                 nuke.root()["name"].setValue(old_path)
                 raise TankError("Failed to save scene %s", e)
-            
         elif operation == "reset":
             """
             Reset the scene to an empty state
@@ -160,7 +152,6 @@ class SceneOperation(Hook):
 
             # now clear the script:
             nuke.scriptClear()
-            
             return True
 
     def _get_current_project(self):
