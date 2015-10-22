@@ -55,7 +55,7 @@ class SceneOperation(Hook):
                                 all others     - None
         """
         engine = self.parent.engine
-        if if hasattr(engine, "hiero_enabled") and engine.hiero_enabled:
+        if hasattr(engine, "hiero_enabled") and engine.hiero_enabled:
             return self._hiero_execute(*args, **kwargs)
         else:
             return self._nuke_execute(*args, **kwargs)
