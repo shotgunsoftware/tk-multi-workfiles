@@ -997,7 +997,13 @@ class WorkFiles(object):
         
         # find settings for all instances of app in 
         # the environment picked for the given context:
-        other_settings = tank.platform.find_app_settings(self._app.engine.name, self._app.name, self._app.tank, context)
+        other_settings = tank.platform.find_app_settings(
+            self._app.engine.name,
+            self._app.name,
+            self._app.tank,
+            context,
+            self._app.engine.instance_name,
+        )
         
         if len(other_settings) == 1:
             return other_settings[0].get("settings")
