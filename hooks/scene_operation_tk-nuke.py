@@ -57,10 +57,31 @@ class SceneOperation(Hook):
         engine = self.parent.engine
         if hasattr(engine, "hiero_enabled") and engine.hiero_enabled:
             return self._hiero_execute(*args, **kwargs)
+        elif hasattr(engine, "studio_enabled") and engine.studio_enabled:
+            return self._studio_execute(*args, **kwargs)
         else:
             return self._nuke_execute(*args, **kwargs)
 
+    def _studio_execute(self, operation, file_path, context, parent_action, file_version, read_only, **kwargs):
+        """
+        The Nuke Studio specific scene operations.
+        """
+        # Out of the box, we treat Nuke Studio just like Hiero, so we
+        # can just call through.
+        return self._hiero_execute(
+            operation,
+            file_path,
+            context,
+            parent_action,
+            file_version,
+            read_only,
+            **kwargs
+        )
+
     def _hiero_execute(self, operation, file_path, context, parent_action, file_version, read_only, **kwargs):
+        """
+        The Hiero specific scene operations.
+        """
         import hiero
 
         if operation == "current_path":
@@ -100,6 +121,9 @@ class SceneOperation(Hook):
             hiero.core.newProject()
     
     def _nuke_execute(self, operation, file_path, context, parent_action, file_version, read_only, **kwargs):
+        """
+        The Nuke specific scene operations.
+        """
         if file_path:
             file_path = file_path.replace("/", os.path.sep)
         
