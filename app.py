@@ -86,6 +86,13 @@ class MultiWorkFiles(tank.platform.Application):
                                      "in this engine! You can currently only use it with the following "
                                      "engines: %s" % ", ".join(SUPPORTED_ENGINES))
 
+    @property
+    def context_change_allowed(self):
+        """
+        Specifies that context changes are allowed.
+        """
+        return True
+
     def destroy_app(self):
         self.log_debug("Destroying tk-multi-workfiles")
         
