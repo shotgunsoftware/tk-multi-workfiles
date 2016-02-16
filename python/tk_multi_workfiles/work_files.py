@@ -462,7 +462,11 @@ class WorkFiles(object):
         ctx_entity = file.task or file.entity or self._context.project
         new_ctx = self._app.tank.context_from_entity(ctx_entity.get("type"), ctx_entity.get("id"))
 
-        self._app.log_metric("Open workfile")
+        try:
+            self._app.log_metric("Open workfile")
+        except:
+            # ignore all errors. ex: using a core that doesn't support metrics
+            pass
 
         return self._do_copy_and_open(src_path, work_path, None, not file.editable, new_ctx)
         
@@ -526,7 +530,11 @@ class WorkFiles(object):
         ctx_entity = file.task or file.entity or self._context.project
         new_ctx = self._app.tank.context_from_entity(ctx_entity.get("type"), ctx_entity.get("id"))
 
-        self._app.log_metric("Open published file")
+        try:
+            self._app.log_metric("Open published file")
+        except:
+            # ignore all errors. ex: using a core that doesn't support metrics
+            pass
 
         return self._do_copy_and_open(src_path, work_path, None, not file.editable, new_ctx)
         
@@ -711,7 +719,11 @@ class WorkFiles(object):
             self._app.log_exception("Failed to complete new file operation")
             return
         else:
-            self._app.log_metric("New file")
+            try:
+                self._app.log_metric("New file")
+            except:
+                # ignore all errors. ex: using a core that doesn't support metrics
+                pass
 
         # close work files UI:
         self._workfiles_ui.close()
