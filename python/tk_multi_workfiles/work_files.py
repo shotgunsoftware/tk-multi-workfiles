@@ -460,7 +460,9 @@ class WorkFiles(object):
                     
         # get best context we can for file:
         ctx_entity = file.task or file.entity or self._context.project
-        new_ctx = self._app.tank.context_from_entity(ctx_entity.get("type"), ctx_entity.get("id"))  
+        new_ctx = self._app.tank.context_from_entity(ctx_entity.get("type"), ctx_entity.get("id"))
+
+        self._app.log_metric("Open workfile")
 
         return self._do_copy_and_open(src_path, work_path, None, not file.editable, new_ctx)
         
@@ -523,7 +525,9 @@ class WorkFiles(object):
         # get best context we can for file:
         ctx_entity = file.task or file.entity or self._context.project
         new_ctx = self._app.tank.context_from_entity(ctx_entity.get("type"), ctx_entity.get("id"))
-        
+
+        self._app.log_metric("Open published file")
+
         return self._do_copy_and_open(src_path, work_path, None, not file.editable, new_ctx)
         
     def _do_open_publish_read_only(self, file, is_latest):
@@ -706,6 +710,8 @@ class WorkFiles(object):
                                        "Failed to complete new file operation:\n\n%s!" % e)
             self._app.log_exception("Failed to complete new file operation")
             return
+        else:
+            self._app.log_metric("New file")
 
         # close work files UI:
         self._workfiles_ui.close()
