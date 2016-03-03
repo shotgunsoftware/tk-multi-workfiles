@@ -1,5 +1,34 @@
 <RCC>
-  <qresource prefix="res">
+  <qresource prefix="tk-multi-workfiles">
+    <file>publish_icon.png</file>
+    <file>folder_512x400.png</file>
+    <file>tree_arrow_large_collapsed.png</file>
+    <file>tree_arrow_large_expanded.png</file>
+    <file>tree_arrow_expanded.png</file>
+    <file>tree_arrow_collapsed.png</file>
+    <file>clear_search_hover.png</file>
+    <file>clear_search.png</file>
+    <file>details_view_checked_hover.png</file>
+    <file>details_view_unchecked_hover.png</file>
+    <file>grid_view_unchecked_hover.png</file>
+    <file>grid_view_checked_hover.png</file>
+    <file>details_view_unchecked.png</file>
+    <file>grid_view_checked.png</file>
+    <file>grid_view_unchecked.png</file>
+    <file>details_view_checked.png</file>
+    <file>left_arrow_disabled.png</file>
+    <file>left_arrow_hover.png</file>
+    <file>left_arrow_pressed.png</file>
+    <file>left_arrow.png</file>
+    <file>right_arrow_disabled.png</file>
+    <file>right_arrow_hover.png</file>
+    <file>right_arrow_pressed.png</file>
+    <file>right_arrow.png</file>
+    <file>home_disabled.png</file>
+    <file>home_hover.png</file>
+    <file>home_pressed.png</file>
+    <file>home.png</file>
+    <file>search.png</file>
     <file>save_as_icon.png</file>
     <file>thumb_empty.png</file>
     <file>padlock.png</file>

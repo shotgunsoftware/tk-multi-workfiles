@@ -91,6 +91,7 @@ class FileItem(object):
         self._is_published = is_published
         self._details = details
         self._key = key
+        self._thumbnail_image = None
 
     def __repr__(self):
         return "%s (v%d), is_local:%s, is_publish: %s" % (self.name, self.version, self.is_local, self.is_published)
@@ -122,8 +123,20 @@ class FileItem(object):
         return self._details.get("task")
     
     @property
-    def thumbnail(self):
+    def thumbnail_path(self):
         return self._details.get("thumbnail")
+    @thumbnail_path.setter
+    def thumbnail_path(self, value):
+        if value != self._details.get("thumbnail"):
+            self._details["thumbnail"] = value
+            self._thumbnail_image = None 
+
+    @property
+    def thumbnail(self):
+        return self._thumbnail_image
+    @thumbnail.setter
+    def thumbnail(self, value):
+        self._thumbnail_image = value
 
     @property
     def key(self):
@@ -173,7 +186,7 @@ class FileItem(object):
         
     @property
     def published_file_id(self):
-        return self._details.get("published_file_id")
+        return self._details.get("published_file_entity_id")
     
     @property
     def publish_description(self):
@@ -193,15 +206,15 @@ class FileItem(object):
         be used in UI elements
         """
         details_str = ""
-        if self.published_at:
-            details_str += ("Published %s" % self._format_modified_date_time_str(self.published_at))
-        else:
-            details_str += "Published on: <i>Unknown</i>"
-        details_str += "<br>"
         if self.published_by and "name" in self.published_by:
-            details_str += ("Published by %s" % self.published_by["name"])
+            details_str += self.published_by["name"]#("Published by %s" % self.published_by["name"])
         else:
-            details_str += "Published by: <i>Unknown</i>"
+            details_str += "<i>Unknown</i>"#"Published by: <i>Unknown</i>"
+        details_str += "<br>"
+        if self.published_at:
+            details_str += self._format_modified_date_time_str(self.published_at)#("Published %s" % self._format_modified_date_time_str(self.published_at))
+        else:
+            details_str += "<i>Unknown</i>"#"Published on: <i>Unknown</i>"
         return details_str
 
     def format_modified_by_details(self):
@@ -210,15 +223,18 @@ class FileItem(object):
         be used in UI elements
         """
         details_str = ""
-        if self.modified_at:
-            details_str += ("Last updated %s" % self._format_modified_date_time_str(self.modified_at))
-        else:
-            details_str += "Last updated: <i>Unknown</i>"
-        details_str += "<br>"
         if self.modified_by and "name" in self.modified_by:
-            details_str += ("Updated by %s" % self.modified_by["name"])
+            details_str += self.modified_by["name"]#("Updated by %s" % self.modified_by["name"])
         else:
-            details_str += "Updated by: <i>Unknown</i>"            
+            details_str += "<i>Unknown</i>"#"Updated by: <i>Unknown</i>"   
+
+        details_str += "<br>"
+        
+        if self.modified_at:
+            details_str += self._format_modified_date_time_str(self.modified_at)#("Last updated %s" % self._format_modified_date_time_str(self.modified_at))
+        else:
+            details_str += "<i>Unknown</i>"#"Last updated: <i>Unknown</i>"
+         
         return details_str
     
     def format_publish_description(self):
@@ -230,6 +246,52 @@ class FileItem(object):
             return ("%s" % self.publish_description)
         else:
             return "<i>No description was entered for this publish</i>"
+    
+    def compare(self, other):
+        """
+        """
+        if self.is_published != other.is_published:
+            # exactly one of the two files is published so we are comparing
+            # a work file with a published file
+            if self.is_published:
+                return other.compare_with_publish(self) * -1
+            else:
+                return self.compare_with_publish(other)
+
+        # see if the files are the same key:
+        if self.key == other.key:
+            # see if we can get away with just comparing versions:
+            if self.version > other.version:
+                return 1
+            elif self.version < other.version:
+                return -1
+            else:
+                # same version so we'll need to look further!
+                pass
+
+        # handle if both are publishes or if both are local:
+        diff = timedelta()
+        if self.is_published:
+            # both are publishes so just compare publish times:
+            if not self.published_at or not other.published_at:
+                # can't compare!
+                return 0
+            diff = self.published_at - other.published_at
+        else:
+            # both are local so compare modified times:
+            if not self.modified_at or not other.modified_at:
+                # can't compare!
+                return 0
+            diff = self.modified_at - other.modified_at
+            
+        zero = timedelta(seconds=0)
+        if diff < zero:
+            return -1
+        elif diff > zero:
+            return 1
+        else:
+            return 0
+
     
     def compare_with_publish(self, published_file):
         """
@@ -243,33 +305,38 @@ class FileItem(object):
         if not self.is_local or not published_file.is_published:
             return -1
         
-        if self.version > published_file.version:
-            return 1
-        elif self.version < published_file.version:
-            return -1
-        else:
+        # if the two files have identical keys then start by comparing versions:
+        if self.key == published_file.key:
             if self.path == published_file.publish_path:
                 # they are the same file!
                 return 0
+            
+            # If the versions are different then we can just compare the versions:
+            if self.version > published_file.version:
+                return 1
+            elif self.version < published_file.version:
+                return -1
+
+        # ok, so different files or both files have the same version in which case we
+        # use fuzzy compare to determine which is more recent - note that this will never
+        # return '0' as the files could still have different contents - in this case, the
+        # work file is favoured over the publish!
+        local_is_latest = False
+        if self.modified_at and published_file.published_at:
+            # check file modification time - we only consider a local version to be 'latest' 
+            # if it has a more recent modification time than the published file (with 2mins
+            # tollerance)
+            if self.modified_at > published_file.published_at:
+                local_is_latest = True
             else:
-                # use fuzzy compare when files have different paths - note that this will never
-                # return '0' as the files could still have different contents - in this case, the
-                # work file is favoured over the publish!
-                local_is_latest = False                
-                if self.modified_at and published_file.published_at:
-                    # check file modification time - we only consider a local version to be 'latest' 
-                    # if it has a more recent modification time than the published file (with 2mins
-                    # tollerance)
-                    if self.modified_at > published_file.published_at:
-                        local_is_latest = True
-                    else:
-                        diff = published_file.published_at - self.modified_at
-                        if diff.seconds < 120:
-                            local_is_latest = True
-                else:
-                    # can't compare times so assume local is more recent than publish:
+                diff = published_file.published_at - self.modified_at
+                if diff < timedelta(seconds=120):
                     local_is_latest = True
-                return 1 if local_is_latest else 0
+        else:
+            # can't compare times so assume local is more recent than publish:
+            local_is_latest = True
+            
+        return 1 if local_is_latest else -1
     
     def _format_modified_date_time_str(self, date_time):
         """
@@ -283,12 +350,12 @@ class FileItem(object):
         elif time_diff < timedelta(days=2):
             date_str = "Yesterday"
         else:
-            date_str = "on %d%s %s" % (modified_date.day, 
+            date_str = "%d%s %s" % (modified_date.day, 
                                     self._day_suffix(modified_date.day), 
-                                    modified_date.strftime("%B %Y"))
+                                    modified_date.strftime("%b %Y"))
 
         modified_time = date_time.time()                
-        date_str += (" at %d:%02d%s" % (modified_time.hour % 12, modified_time.minute, 
+        date_str += (", %d:%02d%s" % (modified_time.hour % 12, modified_time.minute, 
                                         "pm" if modified_time.hour > 12 else "am"))
         return date_str
     
@@ -297,11 +364,6 @@ class FileItem(object):
         Return the suffix for the day of the month
         """
         return ["th", "st", "nd", "rd"][day%10 if not 11<=day<=13 and day%10 < 4 else 0]
-
-    def set_thumbnail(self, thumbnail):
-        """
-        """
-        self._details["thumbnail"] = thumbnail
 
 
 

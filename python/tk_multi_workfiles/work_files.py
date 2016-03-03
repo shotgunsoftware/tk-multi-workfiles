@@ -15,6 +15,7 @@ from datetime import datetime
 from pprint import pprint
 
 import tank
+import sgtk
 from tank.platform.qt import QtCore, QtGui 
 from tank import TankError
 from tank_vendor.shotgun_api3 import sg_timezone
@@ -30,7 +31,7 @@ from .file_filter import FileFilter
 from .find_files import FileFinder
 from .users import UserCache
 
-class WorkFiles(object):
+class WorkFiles(QtCore.QObject):#object):
     
     @staticmethod
     def show_file_manager_dlg(app):
@@ -49,10 +50,126 @@ class WorkFiles(object):
         handler = WorkFiles(app)
         handler.change_work_area(enable_start_new)    
     
+    @staticmethod
+    def show_file_open_dlg():
+        """
+        """
+        app = tank.platform.current_bundle()
+        handler = WorkFiles(app)
+        handler.__show_file_open_dlg()
+
+    @staticmethod
+    def show_file_save_dlg():
+        """
+        """
+        app = tank.platform.current_bundle()
+        handler = WorkFiles(app)
+        handler.__show_file_save_dlg()
+    
+    def __show_file_open_dlg(self):
+        """
+        """
+        # first, build the data models for use by the open UI:
+
+        try:
+            from .file_open_form import FileOpenForm
+            res, file_open_ui = self._app.engine.show_modal("File Open", self._app, FileOpenForm, 
+                                                            self._init_file_open_form)
+            if res == QtGui.QDialog.Accepted:
+                print "Lets open a file!"
+                
+        except:
+            self._app.log_exception("Failed to create File Open dialog!")
+            return
+    
+    def _init_file_open_form(self, form):
+        """
+        """
+        form.perform_action.connect(self._on_file_open_perform_action)
+        form.create_new_task.connect(self._on_file_open_create_new_task)
+        
+    def _on_file_open_perform_action(self, action, file, file_versions, environment):
+        """
+        """
+        if not action:
+            return
+        
+        # get the file open form from the sender:
+        form = self.sender()
+        
+        # some debug:
+        if file:
+            self._app.log_debug("Performing action '%s' on file '%s, v%03d'" % (action.label, file.name, file.version))
+        else:
+            self._app.log_debug("Performing action '%s'" % action.label)
+            
+        # execute the action:
+        close_dialog = action.execute(file, file_versions, environment, form)
+        
+        # if this is successful then close the form:
+        if close_dialog and form:
+            form.close() 
+        
+    def _on_file_open_create_new_task(self, current_entity, current_step):
+        """
+        """
+        if not current_entity:
+            return
+        
+        file_open_form = self.sender()
+        
+        # get the current user:
+        current_user = sgtk.util.get_current_user(self._app.sgtk)
+
+        # show new task dialog:
+        from .new_task_form import NewTaskForm
+        new_task_form = NewTaskForm(current_entity, current_step, current_user)
+        
+        res = WrapperDialog.show_modal(new_task_form, "Create New Task", parent=file_open_form)
+        if res == QtGui.QDialog.Accepted:
+            # get details from new_task_form:
+            entity = new_task_form.entity
+            assigned_to = new_task_form.assigned_to
+            pipeline_step = new_task_form.pipeline_step
+            task_name = new_task_form.task_name
+        
+            # create the task:    
+            new_task = None
+            try:
+                new_task = self.create_new_task(task_name, pipeline_step, entity, assigned_to)
+            except TankError, e:
+                QtGui.QMessageBox.warning(parent_ui,
+                                      "Failed to create new task!",
+                                      ("Failed to create a new task '%s' for pipeline step '%s' on entity '%s %s':\n\n%s" 
+                                       % (task_name, pipeline_step.get("code"), entity["type"], entity["code"], e)))
+                return
+
+            # build folders for this new task - we have to do this to ensure
+            # that files found during the search are matched to the correct task
+            # TODO
+            
+            # trigger a refresh of all views in the file-open form:
+            file_open_form.refresh_all()
+    
+    def __show_file_save_dlg(self):
+        """
+        """
+        try:
+            from .test_form import TestForm
+            self._app.engine.show_dialog("TEST", self._app, TestForm)
+            
+            #from .file_save_form import FileSaveForm
+            #self._file_save_ui = self._app.engine.show_dialog("File Save", self._app, FileSaveForm)
+        except:
+            self._app.log_exception("Failed to create File Save dialog!")
+            return
+    
     def __init__(self, app):
         """
         Construction
         """
+        QtCore.QObject.__init__(self, None)
+        
         self._app = app
         self._workfiles_ui = None
 

@@ -11,33 +11,231 @@
 import os
 from datetime import datetime
 from itertools import chain
+import traceback
 
 import sgtk
+from sgtk.platform.qt import QtCore
 from tank_vendor.shotgun_api3 import sg_timezone
 from sgtk import TankError
 
 from .file_item import FileItem
 from .users import UserCache
+from .util import get_templates_for_context
 
-class FileFinder(object):
+from .sg_published_files_model import SgPublishedFilesModel
+from .runnable_task import RunnableTask
+from .environment_details import EnvironmentDetails
+
+class FileFinder(QtCore.QObject):
     """
     Helper class to find work and publish files for a specified context and set of templates
     """
-    def __init__(self, app, user_cache=None):
+    class SearchDetails(object):
+        def __init__(self, name=None):
+            self.entity = None
+            self.step = None
+            self.task = None
+            self.child_entities = []
+            self.name = name
+            self.is_leaf = False
+            
+        def __repr__(self):
+            return ("%s\n"
+                    " - Entity: %s\n"
+                    " - Task: %s\n"
+                    " - Step: %s\n"
+                    " - Is leaf: %s\n%s"
+                    % (self.name, self.entity, self.task, self.step, self.is_leaf, self.child_entities))       
+    
+    search_failed = QtCore.Signal(object, object) # search_id, message
+    files_found = QtCore.Signal(object, object, object) # search_id, file list, EnvironmentDetails
+    
+    def __init__(self, app=None, user_cache=None, parent=None):
         """
         Construction
         
         :param app:           The Workfiles app instance
         :param user_cache:    An UserCache instance used to retrieve Shotgun user information
         """
-        self.__app = app
+        QtCore.QObject.__init__(self, parent)
+        
+        self.__app = app or sgtk.platform.current_bundle()
         self.__user_cache = user_cache or UserCache(app)
+        
         # cache the valid file extensions that can be found
         self.__visible_file_extensions = [".%s" % ext if not ext.startswith(".") else ext 
                                           for ext in self.__app.get_setting("file_extensions", [])]
         
         # and cache any fields that should be ignored when comparing work files:
         self.__version_compare_ignore_fields = self.__app.get_setting("version_compare_ignore_fields", [])
+        
+        self._searches = {}
+     
+    def begin_search(self, search_details, force=False):
+        """
+        [publishes from Shotgun] ->  
+                [find_templates] -> [build publishes list] ->
+                                 -> [find work files]      -> [aggregate files]        
+        """
+        app = sgtk.platform.current_bundle()
+        
+        # first, construct filters and context from search details:
+        publish_filters = []
+        if search_details.entity:
+            publish_filters.append(["entity", "is", search_details.entity])
+            
+        if search_details.task:
+            publish_filters.append(["task", "is", search_details.task])
+        elif search_details.step:
+            publish_filters.append(["task.Task.step", "is", search_details.step])
+            
+        context_entity = search_details.task or search_details.entity or search_details.step
+        
+        # build task chain for search:
+        find_templates_task = RunnableTask(self._task_find_templates, 
+                                   context_entity=context_entity)
+        
+        find_sg_publishes_task = RunnableTask(self._task_find_publishes,
+                                      upstream_tasks = [find_templates_task], 
+                                      publish_filters=publish_filters, 
+                                      force=force)
+        
+        find_work_files_task = RunnableTask(self._task_find_work_files, 
+                                    upstream_tasks = [find_templates_task])
+        
+        filter_publishes_task = RunnableTask(self._task_filter_publishes, 
+                                     upstream_tasks = [find_templates_task, find_sg_publishes_task])
+        
+        aggregate_files_task = RunnableTask(self._task_aggregate_files,
+                                    upstream_tasks = [find_templates_task, find_work_files_task, filter_publishes_task])
+        
+        # we only care about when the final task completes or fails:
+        aggregate_files_task.completed.connect(self._on_search_completed)
+        aggregate_files_task.failed.connect(self._on_search_failed)
+        
+        # keep track of the search:
+        self._searches[aggregate_files_task.id] = aggregate_files_task
+        
+        #print "----------------------------------------------"
+        #print "----------------------------------------------"
+        #print "Beginning search [%s] for ctx entity '%s' with filters: %s" % (aggregate_files_task.id, context_entity, publish_filters)
+        
+        # start the first tasks:
+        aggregate_files_task.start()
+
+        return aggregate_files_task.id
+
+    def stop_search(self, search_id):
+        """
+        """
+        search_task = self._searches.get(search_id)
+        if search_task:
+            #search_task.completed.disconnect(self._on_search_completed)
+            #search_task.failed.disconnect(self._on_search_failed)
+            search_task.stop()
+            del (self._searches[search_id])
+    
+    def stop_all_searches(self):
+        """
+        """
+        for id in self._searches.keys():
+            self.stop_search(id)
+    
+    def _on_search_failed(self, task, msg):
+        """
+        """
+        # clean up search intermediate data:
+        self.stop_search(task.id)
+        
+        # emit signal:
+        self.search_failed.emit(task.id, msg)
+        
+    def _on_search_completed(self, task, result):
+        """
+        """
+        # clean up search intermediate data:
+        self.stop_search(task.id)
+        
+        # emit signal:
+        self.files_found.emit(task.id, result.get("files", []), result.get("environment"))
+        
+    ################################################################################################
+    ################################################################################################
+    
+    def _task_find_templates(self, context_entity, **kwargs):
+        """
+        """
+        app = sgtk.platform.current_bundle()
+        
+        # first, find the context for the specified context entity:
+        context = None
+        try:
+            #cache_key = (details.entity["type"], details.entity["id"])
+            #if cache_key in self.__context_cache:
+            #    details.context =  self.__context_cache[cache_key]
+            #else:
+            # Note - context_from_entity is _really_ slow :(
+            # TODO: profile it to see if it can be improved!
+            context = app.sgtk.context_from_entity(context_entity["type"], context_entity["id"])
+            #self.__context_cache[cache_key] = details.context
+        except TankError, e:
+            #app.log_debug("Failed to create context from entity '%s'" % details.entity)
+            raise        
+
+        # then try to find the templates for the context:        
+        try:
+            templates_to_find = ["template_work", "template_publish", "template_work_area", "template_publish_area"]
+            templates = get_templates_for_context(app, context, templates_to_find)
+            
+            env_details = EnvironmentDetails()
+            env_details.context = context
+            env_details.work_area_template = templates.get("template_work_area")
+            env_details.work_template = templates.get("template_work")
+            env_details.publish_area_template = templates.get("template_publish_area")
+            env_details.publish_template = templates.get("template_publish")
+            
+            return {"environment":env_details, 
+                    "context":context, 
+                    "work_template":env_details.work_template, 
+                    "publish_template":env_details.publish_template}
+        except TankError, e:
+            # had problems getting the work file settings for the specified context!
+            raise
+    
+    def _task_find_publishes(self, publish_filters, publish_template, force, **kwargs):
+        """
+        """
+        sg_publishes = []
+        if publish_filters and publish_template:
+            sg_publishes = self._find_publishes(publish_filters, force)
+        return {"sg_publishes":sg_publishes}
+    
+    def _task_find_work_files(self, context, work_template, **kwargs):
+        """
+        """
+        work_files = []
+        if context and work_template:
+            work_files = self._find_work_files(context, work_template)
+        return {"work_files":work_files}
+    
+    def _task_filter_publishes(self, sg_publishes, publish_template, **kwargs):
+        """
+        """
+        filtered_publishes = []
+        if sg_publishes and publish_template:
+            filtered_publishes = self._filter_publishes(sg_publishes, publish_template)
+        return {"sg_publishes":filtered_publishes}
+
+    def _task_aggregate_files(self, work_files, work_template, sg_publishes, publish_template, context, environment, **kwargs):
+        """
+        """
+        files = []
+        if sg_publishes or work_files:
+            files = self._aggregate_files(work_files, work_template, sg_publishes, publish_template, context) 
+        return {"files":files, "environment":environment}
+
+    ################################################################################################
+    ################################################################################################
 
     def find_files(self, work_template, publish_template, context, filter_file_key=None):
         """
@@ -56,12 +254,28 @@ class FileFinder(object):
         if not work_template:
             return []
     
+        # determien the publish filters to use from the context:
+        publish_filters = [["entity", "is", context.entity or context.project]]
+        if context.task:
+            publish_filters.append(["task", "is", context.task])
+        else:
+            publish_filters.append(["task", "is", None])
+    
         # find all work & publish files and filter out any that should be ignored:
-        work_files = self.__find_work_files(context, work_template)
-        work_files = [wf for wf in work_files if not self.__ignore_file_path(wf["path"])]
+        work_files = self._find_work_files(context, work_template)
+        sg_publishes = self._find_publishes(publish_filters)
+        published_files = self._filter_publishes(sg_publishes, publish_template)
         
-        published_files = self.__find_publishes(context, publish_template)
-        published_files = [pf for pf in published_files if not self.__ignore_file_path(pf["path"])]
+        # return the aggregated list of all files:
+        return self._aggregate_files(work_files, work_template, published_files, publish_template, context, filter_file_key)
+
+    def _aggregate_files(self, work_files, work_template, sg_publishes, publish_template, context, 
+                         filter_file_key=None):
+        """
+        """
+
+        work_files = [wf for wf in work_files if not self.__ignore_file_path(wf["path"])]
+        sg_publishes = [pf for pf in sg_publishes if not self.__ignore_file_path(pf["path"])]
                 
         # now amalgamate the two lists together:
         files = {}
@@ -136,11 +350,11 @@ class FileFinder(object):
         # and add in publish details:
         ctx_fields = context.as_template_fields(work_template)
                     
-        for published_file in published_files:
+        for sg_publish in sg_publishes:
             file_details = {}
     
             # always have a path:
-            publish_path = published_file["path"]
+            publish_path = sg_publish["path"]
             
             # determine the work path fields from the publish fields + ctx fields:
             # The order is important as it ensures that the user is correct if the 
@@ -163,9 +377,9 @@ class FileFinder(object):
             # resolve the work path:
             work_path = work_template.apply_fields(wp_fields)
             
-            # copy common fields from published_file:
+            # copy common fields from sg_publish:
             #
-            file_details = dict([(k, v) for k, v in published_file.iteritems() if k != "path"])
+            file_details = dict([(k, v) for k, v in sg_publish.iteritems() if k != "path"])
             
             # get version from fields if not specified in publish file:
             if file_details["version"] == None:
@@ -197,8 +411,8 @@ class FileFinder(object):
                     file_details["modified_by"] = self.__user_cache.get_file_last_modified_user(publish_path)
                 else:
                     # just use the publish info
-                    file_details["modified_at"] = published_file.get("published_at")
-                    file_details["modified_by"] = published_file.get("published_by")
+                    file_details["modified_at"] = sg_publish.get("published_at")
+                    file_details["modified_by"] = sg_publish.get("published_by")
     
             # make sure all files with the same key have the same name:
             update_name_map = True
@@ -221,14 +435,31 @@ class FileFinder(object):
         # return list of FileItems
         return files.values()
     
-    def __find_publishes(self, context, publish_template):
+    def _find_publishes(self, publish_filters, force=True):
         """
         Find all publishes for the specified context and publish template
         
         :param context:             The context to find publishes for
-        :param publish_template:    The publish template to match found publishes against
         :returns:                   List of dictionaries, each one containing the details
                                     of an individual published file
+        """
+        model = SgPublishedFilesModel(self)
+        # start the process of finding publishes in Shotgun:
+        fields = ["id", "description", "version_number", "image", "created_at", "created_by", "name", "path", "task"]
+        loaded_data = model.load_data(filters = publish_filters, fields = fields)
+        if not loaded_data or force:
+            # refresh data from Shotgun:
+            model.refresh()
+        
+        sg_publishes = model.get_sg_data()
+        
+        # convert created_at unix time stamp to shotgun std time stamp for all publishes
+        for sg_publish in sg_publishes:
+            created_at = sg_publish.get("created_at")
+            if created_at:
+                created_at = datetime.fromtimestamp(created_at, sg_timezone.LocalTimezone())
+                sg_publish["created_at"] = created_at
+        
         """
         # get list of published files for the context from Shotgun:
         sg_filters = [["entity", "is", context.entity or context.project]]
@@ -236,10 +467,15 @@ class FileFinder(object):
             sg_filters.append(["task", "is", context.task])
         published_file_entity_type = sgtk.util.get_published_file_entity_type(self.__app.sgtk)
         sg_fields = ["id", "description", "version_number", "image", "created_at", "created_by", "name", "path", "task"]
-        sg_res = self.__app.shotgun.find(published_file_entity_type, sg_filters, sg_fields)
+        sg_publishes = self.__app.shotgun.find(published_file_entity_type, sg_filters, sg_fields)
+        """
+        return sg_publishes
     
+    def _filter_publishes(self, sg_publishes, publish_template):
+        """
+        """
         # build list of publishes to send to the filter_publishes hook:
-        hook_publishes = [{"sg_publish":sg_publish} for sg_publish in sg_res]
+        hook_publishes = [{"sg_publish":sg_publish} for sg_publish in sg_publishes]
         
         # execute the hook - this will return a list of filtered publishes:
         hook_result = self.__app.execute_hook("hook_filter_publishes", publishes = hook_publishes)
@@ -290,7 +526,7 @@ class FileFinder(object):
         return published_files
     
         
-    def __find_work_files(self, context, work_template):
+    def _find_work_files(self, context, work_template):
         """
         Find all work files for the specified context and work template
         

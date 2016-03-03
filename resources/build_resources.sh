@@ -44,6 +44,23 @@ build_ui open_file_form
 build_ui new_task_form
 build_ui file_item_form
 
+# new UI's:
+build_ui file_open_form
+build_ui file_save_form
+build_ui file_list_form
+build_ui my_tasks_form
+build_ui entity_tree_form
+build_ui navigation_widget
+build_ui breadcrumb_widget
+build_ui task_widget
+
+build_ui test_form
+
+build_ui file_tile
+build_ui group_header_widget
+
+build_ui file_group_widget
+
 # build resources
 echo "building resources..."
 build_res resources
