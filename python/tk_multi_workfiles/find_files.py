@@ -39,7 +39,7 @@ class FileFinder(object):
         # and cache any fields that should be ignored when comparing work files:
         self.__version_compare_ignore_fields = self.__app.get_setting("version_compare_ignore_fields", [])
 
-    def find_files(self, work_template, publish_template, context, filter_file_key=None):
+    def find_files(self, work_template, publish_template, context, filter_file_key=None, require_path=False):
         """
         Find files using the specified context, work and publish templates
         
@@ -57,7 +57,7 @@ class FileFinder(object):
             return []
     
         # find all work & publish files and filter out any that should be ignored:
-        work_files = self.__find_work_files(context, work_template)
+        work_files = self.__find_work_files(context, work_template, require_path)
         work_files = [wf for wf in work_files if not self.__ignore_file_path(wf["path"])]
         
         published_files = self.__find_publishes(context, publish_template)
@@ -290,7 +290,7 @@ class FileFinder(object):
         return published_files
     
         
-    def __find_work_files(self, context, work_template):
+    def __find_work_files(self, context, work_template, require_path):
         """
         Find all work files for the specified context and work template
         
@@ -304,6 +304,12 @@ class FileFinder(object):
         try:
             work_fields = context.as_template_fields(work_template, validate=True)
         except TankError:
+            if require_path:
+                self.__app.log_exception("Unable to resolve all template fields.")
+                # and raise a new, clearer exception for this specific use case:
+                raise TankError("Unable to resolve template fields!  This could mean there is a mismatch "
+                                "between your folder schema and templates.  Please email "
+                                "support@shotgunsoftware.com if you need help fixing this.")
             # could not resolve fields from this context. This typically happens
             # when the context object does not have any corresponding objects on 
             # disk / in the path cache. In this case, we cannot continue with any
