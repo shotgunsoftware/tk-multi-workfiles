@@ -49,6 +49,9 @@ class FileFinder(object):
         :param filter_file_key:     A unique file 'key' that if specified will limit the returned list of files to just 
                                     those that match.  This 'key' should be generated using the FileItem.build_file_key()
                                     method.
+        :param require_path:        If True, ensures that all fields of the template
+                                    can be resolved. Defaults to False.
+
         :returns:                   A list of FileItem instances, one for each unique version of a file found in either 
                                     the work or publish areas
         """
@@ -289,15 +292,18 @@ class FileFinder(object):
             
         return published_files
     
-        
     def __find_work_files(self, context, work_template, require_path):
         """
         Find all work files for the specified context and work template
-        
+
         :param context:             The context to find work files for
         :param publish_template:    The work template to match found files against
+        :param require_path:        If True, ensures that all fields of the template
+                                    can be resolved.
         :returns:                   List of dictionaries, each one containing the details
-                                    of an individual work file        
+                                    of an individual work file
+
+        :raises TankError: Raised when not all fields of the template can be resolved.
         """
         # find work files that match the current work template:
         work_fields = []
