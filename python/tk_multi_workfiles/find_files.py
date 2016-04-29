@@ -312,10 +312,9 @@ class FileFinder(object):
         except TankError:
             if require_path:
                 self.__app.log_exception("Unable to resolve all template fields.")
-                # and raise a new, clearer exception for this specific use case:
-                raise TankError("Unable to resolve template fields!  This could mean there is a mismatch "
-                                "between your folder schema and templates.  Please email "
-                                "support@shotgunsoftware.com if you need help fixing this.")
+                self.__app.log_debug("Template: %s" % work_template)
+                self.__app.log_debug("Context:  %s" % context)
+                raise
             # could not resolve fields from this context. This typically happens
             # when the context object does not have any corresponding objects on 
             # disk / in the path cache. In this case, we cannot continue with any
