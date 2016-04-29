@@ -39,7 +39,7 @@ class FileFinder(object):
         # and cache any fields that should be ignored when comparing work files:
         self.__version_compare_ignore_fields = self.__app.get_setting("version_compare_ignore_fields", [])
 
-    def find_files(self, work_template, publish_template, context, filter_file_key=None):
+    def find_files(self, work_template, publish_template, context, filter_file_key=None, require_path=False):
         """
         Find files using the specified context, work and publish templates
         
@@ -49,6 +49,9 @@ class FileFinder(object):
         :param filter_file_key:     A unique file 'key' that if specified will limit the returned list of files to just 
                                     those that match.  This 'key' should be generated using the FileItem.build_file_key()
                                     method.
+        :param require_path:        If True, ensures that all fields of the template
+                                    can be resolved. Defaults to False.
+
         :returns:                   A list of FileItem instances, one for each unique version of a file found in either 
                                     the work or publish areas
         """
@@ -57,7 +60,7 @@ class FileFinder(object):
             return []
     
         # find all work & publish files and filter out any that should be ignored:
-        work_files = self.__find_work_files(context, work_template)
+        work_files = self.__find_work_files(context, work_template, require_path)
         work_files = [wf for wf in work_files if not self.__ignore_file_path(wf["path"])]
         
         published_files = self.__find_publishes(context, publish_template)
@@ -289,21 +292,29 @@ class FileFinder(object):
             
         return published_files
     
-        
-    def __find_work_files(self, context, work_template):
+    def __find_work_files(self, context, work_template, require_path):
         """
         Find all work files for the specified context and work template
-        
+
         :param context:             The context to find work files for
         :param publish_template:    The work template to match found files against
+        :param require_path:        If True, ensures that all fields of the template
+                                    can be resolved.
         :returns:                   List of dictionaries, each one containing the details
-                                    of an individual work file        
+                                    of an individual work file
+
+        :raises TankError: Raised when not all fields of the template can be resolved.
         """
         # find work files that match the current work template:
         work_fields = []
         try:
             work_fields = context.as_template_fields(work_template, validate=True)
         except TankError:
+            if require_path:
+                self.__app.log_exception("Unable to resolve all template fields.")
+                self.__app.log_debug("Template: %s" % work_template)
+                self.__app.log_debug("Context:  %s" % context)
+                raise
             # could not resolve fields from this context. This typically happens
             # when the context object does not have any corresponding objects on 
             # disk / in the path cache. In this case, we cannot continue with any

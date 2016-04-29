@@ -160,7 +160,13 @@ class SaveAs(object):
                     name = form.name
                     reset_version = form.reset_version
                     
-                    details = self.generate_new_work_file_path(current_path, is_publish, name, reset_version)
+                    try:
+                        details = self.generate_new_work_file_path(current_path, is_publish, name, reset_version, require_path=True)
+                    except TankError, e:
+                        QtGui.QMessageBox.critical(None, "Failed to save file!", "Failed to save file:\n\n%s" % str(e))
+                        self._app.log_exception("Something went wrong while saving!")
+                        continue
+
                     new_path = details.get("path")
                     msg = details.get("message")
                     
@@ -207,7 +213,7 @@ class SaveAs(object):
         # and save the current file as the new path:
         save_file(self._app, SAVE_FILE_AS_ACTION, self._app.context, new_path)
         
-    def generate_new_work_file_path(self, current_path, current_is_publish, new_name, reset_version):
+    def generate_new_work_file_path(self, current_path, current_is_publish, new_name, reset_version, require_path=False):
         """
         Generate a new work file path from the current path taking into
         account existing work files and publishes.
@@ -259,7 +265,7 @@ class SaveAs(object):
         # if we haven't cached the file list already, do it now:
         if not self._cached_files:
             finder = FileFinder(self._app)
-            self._cached_files = finder.find_files(self._work_template, self._publish_template, self._app.context)
+            self._cached_files = finder.find_files(self._work_template, self._publish_template, self._app.context, require_path=require_path)
 
         # construct a file key that represents all versions of this publish/work file:
         file_key = FileItem.build_file_key(fields, self._work_template, 
