@@ -314,7 +314,12 @@ class FileFinder(object):
                 self.__app.log_exception("Unable to resolve all template fields.")
                 self.__app.log_debug("Template: %s" % work_template)
                 self.__app.log_debug("Context:  %s" % context)
-                raise
+                raise TankError(
+                    "Unable to resolve template fields!  This could mean there is a mismatch "
+                    "between your folder schema and templates or that not all entities could "
+                    "be matched to a folder.  Please email support@shotgunsoftware.com if you "
+                    "need help fixing this."
+                )
             # could not resolve fields from this context. This typically happens
             # when the context object does not have any corresponding objects on 
             # disk / in the path cache. In this case, we cannot continue with any
