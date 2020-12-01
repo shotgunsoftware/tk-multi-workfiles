@@ -317,8 +317,8 @@ class FileFinder(object):
                 raise TankError(
                     "Unable to resolve template fields!  This could mean there is a mismatch "
                     "between your folder schema and templates or that not all entities could "
-                    "be matched to a folder.  Please email support@shotgunsoftware.com if you "
-                    "need help fixing this."
+                    "be matched to a folder.  Please contact us via {} if you "
+                    "need help fixing this.".format(sgtk.support_url)
                 )
             # could not resolve fields from this context. This typically happens
             # when the context object does not have any corresponding objects on 
