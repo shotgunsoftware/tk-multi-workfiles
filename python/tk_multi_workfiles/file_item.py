@@ -199,7 +199,7 @@ class FileItem(object):
             details_str += "Published on: <i>Unknown</i>"
         details_str += "<br>"
         if self.published_by and "name" in self.published_by:
-            details_str += ("Published by %s" % self.published_by["name"])
+            details_str += ("Published by %s" % self.published_by["name"].decode("utf-8"))
         else:
             details_str += "Published by: <i>Unknown</i>"
         return details_str
@@ -216,7 +216,7 @@ class FileItem(object):
             details_str += "Last updated: <i>Unknown</i>"
         details_str += "<br>"
         if self.modified_by and "name" in self.modified_by:
-            details_str += ("Updated by %s" % self.modified_by["name"])
+            details_str += ("Updated by %s" % self.modified_by["name"].decode("utf-8"))
         else:
             details_str += "Updated by: <i>Unknown</i>"            
         return details_str
@@ -227,7 +227,7 @@ class FileItem(object):
         in UI elements
         """
         if self.publish_description:
-            return ("%s" % self.publish_description)
+            return ("%s" % self.publish_description.decode("utf-8"))
         else:
             return "<i>No description was entered for this publish</i>"
     
