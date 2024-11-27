@@ -82,6 +82,15 @@ class Versioning(object):
         if not work_path or not self._work_template.validate(work_path):
             msg = ("Unable to Change Version!\n\nPlease save the scene as a valid work file before continuing")
             QtGui.QMessageBox.information(None, "Unable To Change Version!", msg)
+            # current scene path must match work template and contain version:
+
+            # try to launch "Shotgun Save As" command if we have it:
+            save_as_cmd = tank.platform.current_engine().commands.get("Shotgun Save As...")
+            if not save_as_cmd:
+                # try old name, just in case
+                save_as_cmd = tank.platform.current_engine().commands.get("Tank Save As...")
+            if save_as_cmd:
+                save_as_cmd["callback"]()
             return
 
         if not "version" in self._work_template.keys:
